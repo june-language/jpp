@@ -1,0 +1,27 @@
+# Editor/Compiler files #
+#########################
+.vscode/
+June.code-workspace
+build/
+.cache
+
+# Packages #
+############
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# OS generated files #
+######################
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
