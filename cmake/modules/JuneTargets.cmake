@@ -67,28 +67,44 @@ function(newJuneTarget targetName)
     )
   endif()
 
-  set(NJT_RO_DIR "${CMAKE_BINARY_DIR}/lib/${NJT_LIBRARY_INSTALL_DIR}")
-
   if (NJT_BINARY)
-    set(NJT_RO_DIR "${CMAKE_BINARY_DIR}/bin/")
+    set_target_properties(
+      ${targetName}
+      PROPERTIES
+      OUTPUT_NAME ${targetName}
+      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+      INSTALL_RPATH_USE_LINK_PATH ON
+    )
+
+    install(
+      TARGETS ${targetName}
+      RUNTIME
+        DESTINATION bin/${NJT_LIBRARY_INSTALL_DIR}
+        COMPONENT Binaries
+      PUBLIC_HEADER
+        DESTINATION include/${NJT_INCLUDE_INSTALL_DIR}
+    )
+  else()
+    set_target_properties(
+      ${targetName}
+      PROPERTIES
+      PREFIX "libJune"
+      OUTPUT_NAME ${targetName}
+      LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/${NJT_LIBRARY_INSTALL_DIR}"
+      INSTALL_RPATH_USE_LINK_PATH ON
+    )
+
+    message(STATUS "lib/${NJT_LIBRARY_INSTALL_DIR}")
+
+    install(
+      TARGETS ${targetName}
+      LIBRARY
+        DESTINATION lib/${NJT_LIBRARY_INSTALL_DIR}
+        COMPONENT Libraries
+      PUBLIC_HEADER
+        DESTINATION include/${NJT_INCLUDE_INSTALL_DIR}
+    )
   endif()
-
-  set_target_properties(
-    ${targetName}
-    PROPERTIES
-    OUTPUT_NAME ${targetName}
-    RUNTIME_OUTPUT_DIRECTORY "${NJT_RO_DIR}"
-    INSTALL_RPATH_USE_LINK_PATH ON
-  )
-
-  install(
-    TARGETS ${targetName}
-    RUNTIME
-      DESTINATION lib/${NJT_LIBRARY_INSTALL_DIR}
-      COMPONENT Libraries
-    PUBLIC_HEADER
-	    DESTINATION include/${NJT_INCLUDE_INSTALL_DIR}
-  )
 
   if (EXISTS "${CMAKE_BINARY_DIR}/compile_commands.json")
     add_custom_command(

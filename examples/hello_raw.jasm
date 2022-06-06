@@ -1,0 +1,53 @@
+; This is an example of a June ASM (JASM) file.
+;
+; June ASM is a simple assembler for June
+; which allows you to write programs in a
+; simple text format.
+;
+; The syntax is very simple:
+;
+; label:
+;   instruction
+;   instruction
+;   ...
+;
+; Instructions have the following syntax:
+;
+;   instruction [arg1, arg2, ...]
+;
+; Arguments can be any of the following:
+;
+;   - A number (e.g. 0x1234)
+;   - A string (e.g. "Hello World")
+;   - A boolean (e.g. true)
+;
+; Arguments must be annotated with an operand
+; type, which can be one of the following:
+;
+;   - size
+;     - e.g. 1234_sz
+;   - ident
+;     - e.g. id"Hello World"
+;   - string
+;     - e.g. "Hello World"
+;   - boolean (although these are determined automatically)
+;     - e.g. true, false
+;   - nil
+;     - e.g. nil
+;
+; An example program is shown below:
+;
+
+; `jasm` looks for a main label
+; of which it uses to insert bytecode
+; directly to the vm's load/read functions
+main:
+  load "hello world"
+  load "println"
+  call "00" ; prints "hello world"
+  ;     ^^ the first zero is a varargs check
+  ;        the second zero is a varargs unpack check,
+  ;        if it's '1' then it'll unpack a vec to fill
+  ;        the rest of the args. otherwise, it's just
+  ;        a regular argument
+  return

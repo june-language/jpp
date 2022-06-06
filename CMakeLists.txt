@@ -109,6 +109,11 @@ set(JUNE_COMPILER_VERSION "0.0.1" CACHE STRING "The internal version of the June
 
 execute_process(COMMAND date +"%Y-%m-%d" OUTPUT_VARIABLE BUILD_DATE OUTPUT_STRIP_TRAILING_WHITESPACE)
 execute_process(COMMAND git rev-parse --short HEAD OUTPUT_VARIABLE GIT_REVISION OUTPUT_STRIP_TRAILING_WHITESPACE)
+if (JUNE_DEBUG)
+  set(JUNE_IS_DEBUG true)
+else()
+  set(JUNE_IS_DEBUG false)
+endif()
 configure_file("${PROJECT_SOURCE_DIR}/include/JuneConfig.hpp.in" "${PROJECT_SOURCE_DIR}/include/JuneConfig.hpp" @ONLY)
 
 # For libGMP on macOS and BSD
@@ -146,49 +151,3 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/"
 )
 
 add_subdirectory(lib)
-
-#[[
-
-# JuneCommon (utils, config, etc.)
-file(GLOB_RECURSE INCS RELATIVE "${PROJECT_SOURCE_DIR}" "include/JuneCommon/*.hpp")
-file(GLOB_RECURSE SRCS RELATIVE "${PROJECT_SOURCE_DIR}" "src/JuneCommon/*.cpp")
-
-add_library(junecommon SHARED ${SRCS} ${INCS})
-set_target_properties(junecommon
-    PROPERTIES
-    OUTPUT_NAME junecomm
-    LINK_FLAGS "${EXTRA_LD_FLAGS}"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/june"
-    INSTALL_RPATH_USE_LINK_PATH TRUE
-)
-install(TARGETS junecommon
-	LIBRARY
-	  DESTINATION lib/june
-	  COMPONENT Libraries
-	PUBLIC_HEADER
-	  DESTINATION include/june
-)
-
-# June VM
-
-file(GLOB_RECURSE INCS RELATIVE "${PROJECT_SOURCE_DIR}" "include/VM/*.hpp")
-file(GLOB_RECURSE SRCS RELATIVE "${PROJECT_SOURCE_DIR}" "src/VM/*.cpp")
-
-add_library(blossom-vm SHARED ${SRCS} ${INCS})
-target_link_libraries(junevm june-common)
-set_target_properties(junevm
-    PROPERTIES
-    OUTPUT_NAME junevm
-    LINK_FLAGS "${EXTRA_LD_FLAGS}"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/june"
-    INSTALL_RPATH_USE_LINK_PATH TRUE
-)
-install(TARGETS junevm
-	LIBRARY
-	  DESTINATION lib/june
-	  COMPONENT Libraries
-	PUBLIC_HEADER
-	  DESTINATION include/june
-)
-
-]]#

@@ -1,9 +1,22 @@
 #ifndef config_hpp
 #define config_hpp
 
-#define JuneGitRev ""
-#define JuneBuildDate "2022-05-20"
+/// June git revision
+#define JuneGitRev "512e8ae"
+
+/// June build date
+#define JuneBuildDate "2022-06-05"
+
+/// June version
 #define JuneVersion "0.1"
+
+/// June Memory Debugging
+#define JuneMemDebug true
+
+/// June debug check
+/// The reason it's not a macro is because
+/// we need to be able to override it at runtime.
+static bool JuneDebug = true;
 
 #endif
 
