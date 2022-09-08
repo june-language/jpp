@@ -77,6 +77,9 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release" OR "${CMAKE_BUILD_TYPE}" STREQUAL "
   # add_definitions(-DRELEASE_MODE)
 endif()
 
+# Fixes issue with -fPIC not appearing in compiler flags
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # Cross-compiling
 if("${JUNE_CROSS_COMPILE}")
   # Check if clang/clang++ is available on the system

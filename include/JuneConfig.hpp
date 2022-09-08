@@ -2,10 +2,10 @@
 #define config_hpp
 
 /// June git revision
-#define JuneGitRev "703c4b1"
+#define JuneGitRev "7b249a8"
 
 /// June build date
-#define JuneBuildDate "2022-09-03"
+#define JuneBuildDate "2022-09-08"
 
 /// June version
 #define JuneVersion "0.1"

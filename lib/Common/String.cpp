@@ -1,6 +1,8 @@
 #include "Common.hpp"
 #include "c/Common.h"
 
+#include <algorithm>
+
 bool june::string::endsWith(const std::string &str, const std::string &suffix) {
   if (str.length() < suffix.length()) {
     return false;

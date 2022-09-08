@@ -3,11 +3,13 @@
 
 #include "JuneConfig.hpp"
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <ostream>
 #include <sstream>
 #include <string>
 #include <vector>
+#include <functional>
 
 // `NullStream` is a stream that doesn't print anything.
 class NullStream : public std::ostream {
