@@ -1,0 +1,11 @@
+#ifndef config_hpp
+#define config_hpp
+
+#define JuneVersion "@JUNE_VERSION@"
+#define JuneBuildDate @BUILD_DATE@
+#define JuneGitRev "@GIT_REVISION@"
+#define JuneMemDebug @JUNE_IS_DEBUG@
+
+static bool JuneDebug = @JUNE_IS_DEBUG@;
+
+#endif

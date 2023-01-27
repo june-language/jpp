@@ -1,0 +1,9 @@
+[submodule "vendor/cxxopts"]
+	path = vendor/cxxopts
+	url = https://github.com/jarro2783/cxxopts.git
+[submodule "vendor/result"]
+	path = vendor/result
+	url = https://github.com/bitwizeshift/result.git
+[submodule "vendor/json"]
+	path = vendor/json
+	url = https://github.com/nlohmann/json.git
