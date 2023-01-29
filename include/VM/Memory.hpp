@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <list>
 #include <map>
+#include <mutex>
 
 namespace june {
 

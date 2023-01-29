@@ -23,12 +23,5 @@ auto main(int argc, char **argv) -> int {
   auto mb = kb * 1024;
   auto gb = mb * 1024;
 
-  auto ptr = june::mem::alloc(1.5 * gb);
-  june::mem::zero(ptr, 1.5 * gb);
-
-  std::cin.get();
-
-  june::mem::free(ptr, 1.5 * gb);
-
   return 0;
 }
