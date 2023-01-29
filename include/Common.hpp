@@ -9,6 +9,7 @@
 #include <ostream>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "_defines.h"
@@ -25,6 +26,21 @@ public:
   }
 };
 
+namespace june {
+namespace fs {
+
+// Forward declares `june::fs::relativePath` and `june::fs::cwd` for the DebugLog macro
+
+/// @brief Gets the current working directory
+auto cwd() -> std::string;
+
+/// @brief Gets the relative path to the provided dir (or cwd)
+auto relativePath(const std::string &path, const std::string &dir = cwd())
+    -> std::string;
+
+}
+}
+
 /// Logs the current line number and file name as well as
 /// the function name and a given message to a stream
 #define DebugLog                                                               \
@@ -35,19 +51,28 @@ public:
 /// @brief Common namespace for June
 namespace june {
 
+namespace dbg {
+
+/// @brief Demangles a C++ symbol
+auto demangle(const char *symbol) -> std::string;
+
+/// @brief Demangles a C++ symbol
+static auto demangle(const std::string &symbol) -> std::string { return demangle(symbol.c_str()); }
+
+/// @brief Gets the name of a type
+template <typename T> auto typeName() -> std::string { return demangle(typeid(T).name()); }
+
+}
+
 namespace sfinae {
 
-/// @brief Checks if a type is equatable to itself (has == and != operators)
+/// @brief Checks if a type is equatable to itself (has == operator)
 template <typename T> struct isEquatable {
-  template <typename U> static auto test(U *) -> decltype(std::declval<U>() ==
-                                                         std::declval<U>(),
-                                                         std::declval<U>() !=
-                                                             std::declval<U>(),
-                                                         std::true_type());
+  template <typename U> static auto test(U *u) -> decltype(*u == *u);
+  template <typename U> static auto test(...) -> void;
 
-  template <typename> static auto test(...) -> std::false_type;
-
-  static constexpr bool value = decltype(test<T>(nullptr))::value;
+  static constexpr bool value = !std::is_void<decltype(test<T>(nullptr))>::value;
+  using type = std::integral_constant<bool, value>;
 };
 
 }
@@ -64,7 +89,9 @@ enum class ErrorKind {
   /// @brief An error occurred while parsing arguments
   Args,
   /// @brief An error was raised by the user
-  Raised
+  Raised,
+  /// @brief An error occurred while unwrapping on None or Err
+  Unwrap,
 };
 
 /// @brief Describes an error kidn
@@ -91,10 +118,8 @@ struct Error {
       out << " (" << errKindAsString(kind) << ")";
     }
 
-    out << std::endl;
-
     if (fatal) {
-      out << "fatal error: exiting" << std::endl;
+      out << " - fatal error: exiting";
       exit(1);
     }
   }
@@ -112,11 +137,11 @@ struct Error {
   auto operator==(const Error &other) const -> bool {
     return kind == other.kind && desc == other.desc && fatal == other.fatal;
   }
+
+  auto operator!=(const Error &other) const -> bool { return !(*this == other); }
 };
 
-template <typename O, typename E,
-          typename = std::enable_if_t<sfinae::isEquatable<O>::value &&
-                                      sfinae::isEquatable<E>::value>>
+template <typename O, typename E>
 struct Result {
 private:
   bool isError;
@@ -158,36 +183,42 @@ public:
       return os << ok;
   }
 
-  inline auto isOk() -> bool const { return !isError; }
-  inline auto isErr() -> bool const { return isError; }
+  inline auto isOk() const -> bool { return !isError; }
+  inline auto isErr() const -> bool { return isError; }
 
-  inline auto getOk() -> O *const { return isError ? nullptr : &ok; }
-  inline auto getErr() -> E *const { return isError ? &err : nullptr; }
+  inline auto getOk() const -> O * { return isError ? nullptr : &ok; }
+  inline auto getErr() const -> E * { return isError ? &err : nullptr; }
 
-  inline auto unwrap() -> O const {
+  inline auto unwrap() const -> O {
     if (isError)
-      throw std::runtime_error("called `Result::unwrap()` on an `Err` value");
+      Error(ErrorKind::Unwrap, "called `Result::unwrap()` on an `Err` value", true)
+          .print(std::cerr);
     return ok;
   }
 
-  inline auto unwrapErr() -> E const {
+  inline auto unwrapErr() const -> E {
     if (!isError)
-      throw std::runtime_error("called `Result::unwrapErr()` on an `Ok` value");
+      Error(ErrorKind::Unwrap, "called `Result::unwrapErr()` on an `Ok` value", true)
+          .print(std::cerr);
     return err;
   }
 
-  auto unwrapOr(O other) -> O {
+  template <typename = typename std::enable_if<!std::is_void<O>::value>::type>
+  auto unwrapOr(O other) const -> O {
     if (isError)
       return other;
     return ok;
   }
 
-  auto unwrapOrElse(std::function<O(E &)> f) -> O {
+  template <typename = typename std::enable_if<!std::is_void<O>::value>::type>
+  auto unwrapOrElse(std::function<O(const E &)> f) const -> O {
     if (isError)
       return f(err);
     return ok;
   }
 
+  template <typename = typename sfinae::isEquatable<O>::type,
+          typename = typename sfinae::isEquatable<E>::type>
   auto operator==(const Result &other) const -> bool {
     if (isError != other.isError)
       return false;
@@ -197,10 +228,35 @@ public:
     else
       return ok == other.ok;
   }
-};
 
-template <typename O, typename E>
-auto operator<<(std::ostream &os, const Result<O, E> &result) -> std::ostream &;
+  template <typename = typename sfinae::isEquatable<O>::type,
+          typename = typename sfinae::isEquatable<E>::type>
+  auto operator!=(const Result &other) const -> bool { return !(*this == other); }
+
+  // Fallback for when O and/or E are not equatable
+  template <>
+  auto operator==(const Result &other) const -> bool {
+    DebugLog << "Result::operator== should not be used for Result<" << dbg::typeName<O>()
+             << ", " << dbg::typeName<E>() << ">" << std::endl;
+    DebugLog << "It will not effectively compare the values of the Result, only if they are "
+                "both errors or both ok" << std::endl;
+    if (isError != other.isError)
+      return false;
+    return true;
+  }
+
+  // Fallback for when O and/or E are not equatable
+  template <>
+  auto operator!=(const Result &other) const -> bool {
+    DebugLog << "Result::operator!= should not be used for Result<" << dbg::typeName<O>()
+             << ", " << dbg::typeName<E>() << ">" << std::endl;
+    DebugLog << "It will not effectively compare the values of the Result, only if they are "
+                "both errors or both ok" << std::endl;
+    if (isError != other.isError)
+      return false;
+    return true;
+  }
+};
 
 using Errors = err::Result<void, err::Error>;
 } // namespace err
@@ -209,6 +265,9 @@ namespace string {
 
 /// @brief Checks if a string ends with a certain substring
 auto endsWith(const std::string &str, const std::string &suffix) -> bool;
+
+/// @brief Checks if a string starts with a certain substring
+auto startsWith(const std::string &str, const std::string &prefix) -> bool;
 
 /// @brief Splits a string into a vector of strings
 auto split(const std::string &str, const std::string &delim)
@@ -230,6 +289,9 @@ auto toUpper(const std::string &str) -> std::string;
 
 /// @brief Converts a string to titlecase
 auto toTitle(const std::string &str) -> std::string;
+
+/// @brief Trims whitespace from the beginning and end of a string
+auto trim(const std::string &str) -> std::string;
 
 /// @brief Converts a string to C-style string by copying it
 auto duplicateAsCString(const std::string &str) -> const char *;
@@ -264,15 +326,8 @@ auto isFile(const std::string &path) -> bool;
 /// @brief Gets the file name of path
 auto filename(const std::string &path) -> std::string;
 
-/// @brief Gets the current working directory
-auto cwd() -> std::string;
-
 /// @brief Gets the home directory of the user invoking the program
 auto home() -> std::string;
-
-/// @brief Gets the relative path to the provided dir (or cwd)
-auto relativePath(const std::string &path, const std::string &dir = cwd())
-    -> std::string;
 
 /// @brief Searches a directory using the provided matcher
 auto search(const std::string &dir,
@@ -291,5 +346,23 @@ auto getExecutablePath() -> std::string;
 } // namespace env
 
 } // namespace june
+
+static inline auto operator<<(std::ostream &os, const june::err::Error &err) -> std::ostream & {
+  err.print(os);
+  return os;
+}
+
+template <typename O, typename E>
+static inline auto operator<<(std::ostream &os, const june::err::Result<O, E> &result)
+    -> std::ostream & {
+  if (result.isOk()) {
+    os << "Ok(" << result.unwrap() << ")";
+  } else {
+    os << "Err(" << result.unwrapErr() << ")";
+  }
+
+  return os;
+}
+
 
 #endif

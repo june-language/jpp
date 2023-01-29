@@ -6,57 +6,68 @@
 using namespace june::err;
 
 TEST(Errs, KindAsString) {
-  ASSERT_STREQ(errKindAsString(ErrorKind::None), "none");
-  ASSERT_STREQ(errKindAsString(ErrorKind::FileIo), "file i/o");
-  ASSERT_STREQ(errKindAsString(ErrorKind::Exec), "exec error");
-  ASSERT_STREQ(errKindAsString(ErrorKind::Args), "args error");
-  ASSERT_STREQ(errKindAsString(ErrorKind::Raised), "raised");
+  EXPECT_STREQ(errKindAsString(ErrorKind::None), "none");
+  EXPECT_STREQ(errKindAsString(ErrorKind::FileIo), "file i/o");
+  EXPECT_STREQ(errKindAsString(ErrorKind::Exec), "exec error");
+  EXPECT_STREQ(errKindAsString(ErrorKind::Args), "args error");
+  EXPECT_STREQ(errKindAsString(ErrorKind::Raised), "raised");
+  EXPECT_STREQ(errKindAsString(ErrorKind::Unwrap), "unwrap error");
 }
 
-TEST(Errs, GenericError) {
-  auto err = Error(ErrorKind::Exec, "GenericDummy", false);
+static auto err = Error(ErrorKind::Exec, "GenericDummy", false);
+
+TEST(Errs, ErrStream) {
   std::stringstream ss;
-
-  ASSERT_FALSE(err.fatal);
-  err.print(ss);
-  ASSERT_STREQ(ss.str().c_str(), "err: GenericDummy (exec error)\n");
-
-  err.setFatal(true);
-  // TODO: get death tests to work as expected
-  ASSERT_DEATH(err.print(std::cerr),
-               ".*");
-              //  "err: GenericDummy (exec error)\nfatal error: exiting\n");
+  ss << err;
+  EXPECT_STREQ(ss.str().c_str(), "err: GenericDummy (exec error)");
 }
 
-TEST(Errs, Results) {
-  using TestRes = Result<int, Error>;
+TEST(Errs, ErrFatal) {
+  EXPECT_FALSE(err.fatal);
+  err.setFatal(true);
+  EXPECT_TRUE(err.fatal);
 
-  auto err = Error(ErrorKind::Exec, "GenericDummy", false);
-  auto res_err = TestRes::Err(err);
-  auto res_ok = TestRes::Ok(0);
+  // TODO: get death tests to work with the matcher
+  EXPECT_DEATH(err.print(std::cerr), ".* - fatal error: exiting");
 
-  ASSERT_TRUE(res_ok.isOk());
-  ASSERT_TRUE(res_err.isErr());
+  err.setFatal(false);
+  EXPECT_FALSE(err.fatal); // reset for the next few tests
+}
 
-  ASSERT_FALSE(res_ok.isErr());
-  ASSERT_FALSE(res_ok.isOk());
+using TestRes = Result<int, Error>;
+static auto res_ok = TestRes::Ok(0);
+static auto res_err = TestRes::Err(err);
 
-  ASSERT_EQ(res_ok.unwrap(), 0);
-  ASSERT_EQ(res_err.unwrapErr(), err);
+TEST(Errs, ResultsStatus) {
+  EXPECT_TRUE(res_ok.isOk());
+  EXPECT_TRUE(res_err.isErr());
 
-  ASSERT_EQ(res_err.unwrapOr(1), 1);
-  ASSERT_EQ(res_ok.unwrapOr(1), 0);
+  EXPECT_FALSE(res_ok.isErr());
+  EXPECT_FALSE(res_err.isOk());
+}
 
-  ASSERT_EQ(res_err.unwrapOrElse([](const Error &err) { return 1; }), 1);
-  ASSERT_EQ(res_ok.unwrapOrElse([](const Error &err) { return 1; }), 0);
+TEST(Errs, ResultsUnwrap) {
+  EXPECT_EQ(res_ok.unwrap(), 0);
+  EXPECT_EQ(res_err.unwrapErr(), err);
+}
 
-  // MARK: Death Tests (Results)
-  ASSERT_DEATH(res_ok.unwrapErr(), ".*");
-  ASSERT_DEATH(res_err.unwrap(), ".*");
+TEST(Errs, ResultsUnwrapOr) {
+  EXPECT_EQ(res_err.unwrapOr(1), 1);
+  EXPECT_EQ(res_ok.unwrapOr(1), 0);
+}
 
+TEST(Errs, ResultsUnwrapOrElse) {
+  EXPECT_EQ(res_err.unwrapOrElse([](const Error &err) { return 1; }), 1);
+  EXPECT_EQ(res_ok.unwrapOrElse([](const Error &err) { return 1; }), 0);
+}
 
-  // TODO: Stream tests for Result::Err
+TEST(Errs, ResultsUnwrapDeath) {
+  EXPECT_DEATH(res_ok.unwrapErr(), ".*\\(unwrap error\\).*");
+  EXPECT_DEATH(res_err.unwrap(), ".*\\(unwrap error\\).*");
+}
+
+TEST(Errs, ResultsStream) {
   std::stringstream ss;
   ss << res_ok;
-  ASSERT_STREQ(ss.str().c_str(), "Ok(0)");
+  EXPECT_STREQ(ss.str().c_str(), "Ok(0)");
 }

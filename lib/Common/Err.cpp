@@ -4,7 +4,7 @@ namespace june {
 
 namespace err {
 
-const char *errKindAsString(ErrorKind kind) {
+auto errKindAsString(ErrorKind kind) -> const char * {
   switch (kind) {
   case ErrorKind::None:
     return "none";
@@ -16,18 +16,9 @@ const char *errKindAsString(ErrorKind kind) {
     return "args error";
   case ErrorKind::Raised:
     return "raised";
+  case ErrorKind::Unwrap:
+    return "unwrap error";
   }
-}
-
-template<typename O, typename E>
-std::ostream &operator<<(std::ostream &out, const Result<O, E> &result) {
-  if (result.isOk()) {
-    out << "Ok(" << result.unwrap() << ")";
-  } else {
-    out << "Err(" << result.unwrapErr() << ")";
-  }
-
-  return out;
 }
 
 } // namespace err

@@ -8,6 +8,11 @@ auto endsWith(const std::string &str, const std::string &suffix) -> bool {
          str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
+auto startsWith(const std::string &str, const std::string &prefix) -> bool {
+  return str.size() >= prefix.size() &&
+         str.compare(0, prefix.size(), prefix) == 0;
+}
+
 auto split(const std::string &str, const std::string &delim)
     -> std::vector<std::string> {
   std::vector<std::string> result;
@@ -60,8 +65,21 @@ auto toUpper(const std::string &str) -> std::string {
 }
 
 auto toTitle(const std::string &str) -> std::string {
-  auto result = toLower(str);
-  result[0] = std::toupper(result[0]);
+  auto words = split(toLower(str), " ");
+
+  for (auto &word : words) {
+    word[0] = std::toupper(word[0]);
+  }
+
+  return join(words, " ");
+}
+
+auto trim(const std::string &str) -> std::string {
+  auto result = str;
+
+  result.erase(0, result.find_first_not_of(" \t\r\n\v"));
+  result.erase(result.find_last_not_of(" \t\r\n\v") + 1);
+  
   return result;
 }
 

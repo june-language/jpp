@@ -1,4 +1,5 @@
 add_subdirectory(Common)
+add_subdirectory(VM)
 
 newJuneTarget(
   june
@@ -8,4 +9,5 @@ newJuneTarget(
 
   LINK_LIBS
   Common
+  VM
 )
