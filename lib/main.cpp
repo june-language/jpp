@@ -19,9 +19,7 @@ auto main(int argc, char **argv) -> int {
 
   DebugLog << "Debugging enabled" << std::endl;
 
-  auto kb = 1024;
-  auto mb = kb * 1024;
-  auto gb = mb * 1024;
+  
 
   return 0;
 }
