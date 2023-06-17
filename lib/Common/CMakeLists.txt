@@ -13,6 +13,8 @@ newJuneTest(
   CommonTests
   AGAINST Common
 
+  TEST
+
   SOURCES
     tests/ErrTest.cpp
     tests/StringTest.cpp

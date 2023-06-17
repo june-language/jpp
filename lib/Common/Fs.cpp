@@ -16,12 +16,11 @@ auto readFile(const std::string &path) -> Result<std::string, Error> {
   return std::string("");
 }
 
-bool exists(const std::string &path) {
+auto exists(const std::string &path) -> bool {
   return std::filesystem::exists(std::filesystem::path(path));
 }
 
-auto absolutePath(const std::string &path, std::string *parent)
-    -> std::string {
+auto absolutePath(const std::string &path, std::string *parent) -> std::string {
   std::filesystem::path p(path);
   auto abs = std::filesystem::absolute(p);
   if (parent != nullptr)
@@ -66,6 +65,36 @@ auto search(const std::string &dir,
     }
   }
   return results;
+}
+
+auto writeBytes(const std::string &path, const std::vector<u8> &bytes) -> Result<void, Error> {
+  if (!exists(path)) {
+    return Error(ErrorKind::FileIo, "Unable to write file: file does not exist");
+  }
+
+  if (bytes.size() == 0) {
+    return Error(ErrorKind::FileIo, "Unable to write file: no bytes to write");
+  }
+
+  if (isDir(path)) {
+    return Error(ErrorKind::FileIo, "Unable to write file: path is a directory");
+  }
+
+  std::ofstream file;
+  file.open(path, std::ios::out | std::ios::binary);
+
+  if (!file.is_open()) {
+    return Error(ErrorKind::FileIo, "Unable to write file: unable to open file");
+  }
+
+  file.write((char *)bytes.data(), bytes.size());
+
+  if (file.bad()) {
+    return Error(ErrorKind::FileIo, "Unable to write file: unable to write to file");
+  }
+
+  file.close();
+  return Result<void, Error>::Ok();
 }
 
 } // namespace fs

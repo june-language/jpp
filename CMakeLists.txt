@@ -113,6 +113,9 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
 # Config
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(JUNE_VERSION "0.1")
+set(JUNE_V_MAJOR 0)
+set(JUNE_V_MINOR 1)
+set(JUNE_V_PATCH 0)
 
 execute_process(COMMAND date +"%Y-%m-%d" OUTPUT_VARIABLE BUILD_DATE OUTPUT_STRIP_TRAILING_WHITESPACE)
 execute_process(COMMAND git rev-parse --short HEAD OUTPUT_VARIABLE GIT_REVISION OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -147,16 +150,24 @@ if(CCACHE_PROGRAM)
   message("-- Using ccache")
 endif()
 
-# Testing
+# FetchContent
 include(FetchContent)
 FetchContent_Declare(
   googletest
   URL https://github.com/google/googletest/archive/2491710524094dc3b77cfa4e8eda2ba8edb0d91c.zip
 )
 
+FetchContent_Declare(
+  nanobench
+  GIT_REPOSITORY https://github.com/martinus/nanobench.git
+  GIT_TAG v4.1.0
+  GIT_SHALLOW TRUE
+)
+
 # Windows: Prevent overriding the parent project's compiler/linker settings
 set(g_test_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
+FetchContent_MakeAvailable(nanobench)
 
 enable_testing()
 

@@ -6,6 +6,11 @@
 #define JuneGitRev "@GIT_REVISION@"
 #define JuneMemDebug @JUNE_IS_DEBUG@
 
+#define JuneVersionMajor @JUNE_V_MAJOR@
+#define JuneVersionMinor @JUNE_V_MINOR@
+#define JuneVersionPatch @JUNE_V_PATCH@
+#define JuneVersionNumber (JuneVersionMajor * 10000 + JuneVersionMinor * 100 + JuneVersionPatch)
+
 static bool JuneDebug = @JUNE_IS_DEBUG@;
 
 #endif

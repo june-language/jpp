@@ -34,7 +34,7 @@ TEST(Errs, ErrFatal) {
   EXPECT_FALSE(err.fatal); // reset for the next few tests
 }
 
-using TestRes = Result<int, Error>;
+using TestRes = Result<u32, Error>;
 static auto res_ok = TestRes::Ok(0);
 static auto res_err = TestRes::Err(err);
 

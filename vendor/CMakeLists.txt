@@ -3,3 +3,6 @@ add_subdirectory(cxxopts)
 
 # Modern C++ JSON library (Nlohmann)
 add_subdirectory(json)
+
+# Modern C++ format library (fmt)
+add_subdirectory(fmt)

@@ -41,7 +41,7 @@ auto replaceAll(const std::string &str, const std::string &from,
 auto join(const std::vector<std::string> &strs, const std::string &delim)
     -> std::string {
   std::string result;
-  for (size_t i = 0; i < strs.size(); i++) {
+  for (u64 i = 0; i < strs.size(); i++) {
     result += strs[i];
     if (i != strs.size() - 1) {
       result += delim;
@@ -53,14 +53,14 @@ auto join(const std::vector<std::string> &strs, const std::string &delim)
 auto toLower(const std::string &str) -> std::string {
   auto result = str;
   std::transform(result.begin(), result.end(), result.begin(),
-                 [](unsigned char c) { return std::tolower(c); });
+                 [](u8 c) { return std::tolower(c); });
   return result;
 }
 
 auto toUpper(const std::string &str) -> std::string {
   auto result = str;
   std::transform(result.begin(), result.end(), result.begin(),
-                 [](unsigned char c) { return std::toupper(c); });
+                 [](u8 c) { return std::toupper(c); });
   return result;
 }
 
@@ -79,13 +79,13 @@ auto trim(const std::string &str) -> std::string {
 
   result.erase(0, result.find_first_not_of(" \t\r\n\v"));
   result.erase(result.find_last_not_of(" \t\r\n\v") + 1);
-  
+
   return result;
 }
 
-auto duplicateAsCString(const std::string &str) -> const char * {
-  auto result = new char[str.size() + 1];
-  std::strcpy(result, str.c_str());
+auto duplicateAsCString(const std::string &str) -> const i8 * {
+  auto *result = new i8[str.size() + 1];
+  std::strncpy(result, str.c_str(), str.size());
   return result;
 }
 

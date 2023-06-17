@@ -12,16 +12,14 @@
 
 namespace june {
 
-typedef unsigned char u8;
-
 namespace mem {
 
 struct __sys_align_t {
-  char c;
-  size_t sz;
+  u8 c;
+  u64 sz;
 };
 
-static auto mult8RoundUp(const std::size_t size) -> const std::size_t {
+static auto mult8RoundUp(const u64 size) -> const u64 {
   return (size + 7) & ~7;
 }
 
@@ -29,15 +27,15 @@ static auto mult8RoundUp(const std::size_t size) -> const std::size_t {
 
 class Allocator {
 protected:
-  size_t _totalAlloc;
-  size_t _totalAllocNoPool;
-  size_t _totalAllocRequested;
-  size_t _totalManuallyAlloc;
+  u64 _totalAlloc;
+  u64 _totalAllocNoPool;
+  u64 _totalAllocRequested;
+  u64 _totalManuallyAlloc;
 
   std::mutex _memLock;
 
 public:
-  Allocator() {}
+  Allocator() = default;
   ~Allocator() {
 #if JuneMemDebug
     DebugLog << "Total memory allocated: " << _totalAlloc << " bytes"
@@ -51,9 +49,9 @@ public:
 #endif
   }
 
-  virtual auto allocate(const std::size_t size, const std::size_t alignment = 0)
+  virtual auto allocate(const u64 size, const u64 alignment = 0)
       -> void * = 0;
-  virtual auto free(void *ptr, std::size_t size) -> void = 0;
+  virtual auto free(void *ptr, u64 size) -> void = 0;
 };
 
 // MARK: PoolAllocator
@@ -65,13 +63,13 @@ struct MemoryPool {
 
 class PoolAllocator : public Allocator {
   std::vector<MemoryPool> _pools;
-  std::map<size_t, std::list<u8 *>> _freeChunks;
+  std::map<u64, std::list<u8 *>> _freeChunks;
 
   auto allocPool() -> void;
 
 public:
-  static constexpr size_t kPoolSize = 4 * 1024;
-  static constexpr size_t kAlignment = sizeof(__sys_align_t) - sizeof(size_t);
+  static constexpr u64 kPoolSize = 4 * 1024;
+  static constexpr u64 kAlignment = sizeof(__sys_align_t) - sizeof(u64);
 
   PoolAllocator() : Allocator() { allocPool(); }
   ~PoolAllocator() {
@@ -89,25 +87,25 @@ public:
       delete[] p.mem;
   }
 
-  auto allocate(const std::size_t size, const std::size_t alignment = 0)
+  auto allocate(const u64 size, const u64 alignment = 0)
       -> void * override;
-  auto free(void *ptr, std::size_t size) -> void override;
+  auto free(void *ptr, u64 size) -> void override;
 };
 
 // MARK: Memory management simplified interface
 
 static Allocator *allocator = new PoolAllocator();
 
-static auto alloc(const std::size_t size, const std::size_t alignment = 0)
+static auto alloc(const u64 size, const u64 alignment = 0)
     -> void * {
   return allocator->allocate(size, alignment);
 }
 
-static auto free(void *ptr, std::size_t size) -> void {
+static auto free(void *ptr, u64 size) -> void {
   allocator->free(ptr, size);
 }
 
-static auto zero(void *ptr, std::size_t size) -> void {
+static auto zero(void *ptr, u64 size) -> void {
   std::memset(ptr, 0, size);
 }
 

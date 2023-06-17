@@ -74,6 +74,7 @@ function(newJuneTarget targetName)
     ${targetName}
     PRIVATE cxxopts::cxxopts
     PRIVATE nlohmann_json::nlohmann_json
+    PRIVATE fmt::fmt
   )
 
   if(JT_LINK_LIBS)
@@ -137,7 +138,7 @@ function(newJuneTarget targetName)
 endfunction()
 
 function(newJuneTest testName)
-  cmake_parse_arguments(JT "" "AGAINST" "SOURCES" ${ARGN})
+  cmake_parse_arguments(JT "TEST;BENCH" "AGAINST" "SOURCES" ${ARGN})
 
   if(NOT __JT_${JT_AGAINST}_exists)
     message(FATAL_ERROR "newJuneTest: Target `${JT_AGAINST}` does not exist or has not been defined")
@@ -158,18 +159,48 @@ function(newJuneTest testName)
     PUBLIC ${PROJECT_SOURCE_DIR}/include/${__JT_${JT_AGAINST}_base_dir}
   )
 
-  target_link_libraries(
-    ${testName}
-    ${__JT_${JT_AGAINST}_link_libs}
-    ${CMAKE_DL_LIBS}
-    GTest::gtest_main
-  )
+  # Vendor libraries
+  if (JT_TEST)
+    target_link_libraries(
+      ${testName}
+      PRIVATE nlohmann_json::nlohmann_json
+      PRIVATE GTest::gtest_main
+      PRIVATE fmt::fmt
+    )
+  elseif(JT_BENCH)
+    target_link_libraries(
+      ${testName}
+      PRIVATE nlohmann_json::nlohmann_json
+      PRIVATE fmt::fmt
+      PRIVATE nanobench
+    )
+  endif()
 
   if (NOT __JT_${JT_AGAINST}_is_binary)
     target_link_libraries(
       ${testName}
-      ${JT_AGAINST}
+      PRIVATE ${JT_AGAINST}
     )
+  endif()
+
+  if (JT_BENCH)
+    # For benchmarks, we'll store the executable under a `bench` directory
+    set_target_properties(
+      ${testName}
+      PROPERTIES
+      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bench"
+    )
+
+    if (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+      install(
+        TARGETS ${testName}
+        RUNTIME
+          DESTINATION bench
+          COMPONENT Benchmarks
+      )
+    endif()
+
+    return()
   endif()
 
   include(GoogleTest)

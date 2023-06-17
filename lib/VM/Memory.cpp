@@ -14,7 +14,7 @@ auto PoolAllocator::allocPool() -> void {
   _pools.push_back({alloc, alloc});
 }
 
-auto PoolAllocator::allocate(std::size_t size, std::size_t alignment)
+auto PoolAllocator::allocate(u64 size, u64 alignment)
     -> void * {
   if (size == 0)
     return nullptr;
@@ -37,7 +37,7 @@ auto PoolAllocator::allocate(std::size_t size, std::size_t alignment)
 
   if (_freeChunks[size].size() == 0) {
     for (auto &p : _pools) {
-      size_t freeSpace = kPoolSize - (p.head - p.mem);
+      u64 freeSpace = kPoolSize - (p.head - p.mem);
       if (freeSpace >= size) {
         u8 *ret = p.head;
         p.head += size;
@@ -69,7 +69,7 @@ auto PoolAllocator::allocate(std::size_t size, std::size_t alignment)
   return ret;
 }
 
-auto PoolAllocator::free(void *ptr, std::size_t size) -> void {
+auto PoolAllocator::free(void *ptr, u64 size) -> void {
   if (ptr == nullptr || size == 0)
     return;
   std::lock_guard<std::mutex> lock(_memLock);

@@ -4,7 +4,7 @@ namespace june {
 
 namespace err {
 
-auto errKindAsString(ErrorKind kind) -> const char * {
+auto errKindAsString(ErrorKind kind) -> const i8 * {
   switch (kind) {
   case ErrorKind::None:
     return "none";

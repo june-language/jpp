@@ -55,7 +55,7 @@
 #if __has_builtin(__builtin_unreachable)
 #define JUNE_UNREACHABLE __builtin_unreachable()
 #else
-#define JUNE_UNREACHABLE for (;;)
+#define JUNE_UNREACHABLE for (;;) // technically UB, but works
 #endif
 #elif defined(JUNE_MSVC)
 #define JUNE_UNREACHABLE __assume(0)
@@ -63,6 +63,55 @@
 #pragma message(                                                               \
     "WARNING: JUNE_UNREACHABLE is not implemented for this compiler")
 #define JUNE_UNREACHABLE
+#endif
+
+// BSWAP functions
+
+#if defined(__builtin_bswap16)
+#define JUNE_BSWAP16 __builtin_bswap16
+#elif defined(JUNE_MSVC)
+#define JUNE_BSWAP16 _byteswap_ushort
+#else
+#define JUNE_BSWAP16(x) (((x) << 8) | ((x) >> 8))
+#endif
+
+#if defined(__builtin_bswap32)
+#define JUNE_BSWAP32 __builtin_bswap32
+#elif defined(JUNE_MSVC)
+#define JUNE_BSWAP32 _byteswap_ulong
+#else
+#define JUNE_BSWAP32(x)                                                      \
+    (((x) << 24) | (((x) << 8) & 0x00FF0000) | (((x) >> 8) & 0x0000FF00) |     \
+     ((x) >> 24))
+#endif
+
+#if defined(__builtin_bswap64)
+#define JUNE_BSWAP64 __builtin_bswap64
+#elif defined(JUNE_MSVC)
+#define JUNE_BSWAP64 _byteswap_uint64
+#else
+#define JUNE_BSWAP64(x)                                                      \
+    (((x) << 56) | (((x) << 40) & 0x00FF000000000000) |                        \
+     (((x) << 24) & 0x0000FF0000000000) | (((x) << 8) & 0x000000FF00000000) | \
+     (((x) >> 8) & 0x00000000FF000000) | (((x) >> 24) & 0x0000000000FF0000) | \
+     (((x) >> 40) & 0x000000000000FF00) | ((x) >> 56))
+#endif
+
+#define JUNE_BSWAP32F(x) JUNE_BSWAP32(*((uint32_t *)&x))
+#define JUNE_BSWAP64F(x) JUNE_BSWAP64(*((uint64_t *)&x))
+
+// Endianness
+#if defined(JUNE_WINDOWS)
+#define JUNE_LE
+#else
+#include <sys/types.h>
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#define JUNE_LE
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define JUNE_BE
+#else
+#error "Unknown endianness"
+#endif
 #endif
 
 #endif

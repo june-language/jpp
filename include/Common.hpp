@@ -2,6 +2,11 @@
 #define common_hpp
 
 #include "JuneConfig.hpp"
+#include "Option.hpp"
+#include "Result.hpp"
+#include "SFINAE.hpp"
+#include <assert.h>
+#include <bit>
 #include <cstdlib>
 #include <cstring>
 #include <functional>
@@ -10,6 +15,7 @@
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "_defines.h"
@@ -26,10 +32,82 @@ public:
   }
 };
 
+// Basic typedefs for convenience
+using u8 = unsigned char;
+using u16 = unsigned short;
+using u32 = unsigned int;
+using u64 = unsigned long;
+using i8 = char;
+using i16 = short;
+using i32 = int;
+using i64 = long;
+using f32 = float;
+using f64 = double;
+
 namespace june {
+
+namespace byteorder {
+// all functions are from native to the specified endianness
+
+enum class endian {
+  little = 0,
+  big = 1,
+#ifdef JUNE_LE
+  native = little,
+#else
+  native = big,
+#endif
+};
+
+/// @brief Converts data to a u8 array
+template <typename T> auto toBytes(T val) -> std::vector<u8> {
+  static_assert(std::is_integral_v<T>, "T must be an integral type");
+  std::vector<u8> bytes(sizeof(T));
+  std::memcpy(bytes.data(), &val, sizeof(T));
+  return bytes;
+}
+
+/// @brief Converts a 16-bit integer from native to big endian
+static inline auto toBigEndian16(u16 val) -> u16 {
+  if constexpr (endian::native == endian::big)
+    return val;
+  return JUNE_BSWAP16(val);
+}
+
+/// @brief Converts a 32-bit integer from native to big endian
+static inline auto toBigEndian32(u32 val) -> u32 {
+  if constexpr (endian::native == endian::big)
+    return val;
+  return JUNE_BSWAP32(val);
+}
+
+/// @brief Converts a 64-bit integer from native to big endian
+static inline auto toBigEndian64(u64 val) -> u64 {
+  if constexpr (endian::native == endian::big)
+    return val;
+  return JUNE_BSWAP64(val);
+}
+
+/// @brief Converts a 32-bit float from native to big endian
+static inline auto toBigEndian32F(f32 val) -> f64 {
+  if constexpr (endian::native == endian::big)
+    return val;
+  return JUNE_BSWAP32F(val);
+}
+
+/// @brief Converts a 64-bit float from native to big endian
+static inline auto toBigEndian64F(f64 val) -> f64 {
+  if constexpr (endian::native == endian::big)
+    return val;
+  return JUNE_BSWAP64F(val);
+}
+
+} // namespace byteorder
+
 namespace fs {
 
-// Forward declares `june::fs::relativePath` and `june::fs::cwd` for the DebugLog macro
+// Forward declares `june::fs::relativePath` and `june::fs::cwd` for the
+// DebugLog macro
 
 /// @brief Gets the current working directory
 auto cwd() -> std::string;
@@ -38,8 +116,8 @@ auto cwd() -> std::string;
 auto relativePath(const std::string &path, const std::string &dir = cwd())
     -> std::string;
 
-}
-}
+} // namespace fs
+} // namespace june
 
 /// Logs the current line number and file name as well as
 /// the function name and a given message to a stream
@@ -51,31 +129,97 @@ auto relativePath(const std::string &path, const std::string &dir = cwd())
 /// @brief Common namespace for June
 namespace june {
 
+namespace structures {
+
+/// @brief A "bitflags"-like type
+template <typename T> class BitFlags {
+  u64 flags;
+
+public:
+  BitFlags() : flags(0) {}
+  BitFlags(u64 flags) : flags(flags) {}
+  BitFlags(const BitFlags &other) : flags(other.flags) {}
+
+  auto operator=(const BitFlags &other) -> BitFlags & {
+    flags = other.flags;
+    return *this;
+  }
+
+  auto operator==(const BitFlags &other) const -> bool {
+    return flags == other.flags;
+  }
+
+  auto operator!=(const BitFlags &other) const -> bool {
+    return flags != other.flags;
+  }
+
+  auto operator[](T flag) const -> bool {
+    return flags & (1 << static_cast<int>(flag));
+  }
+
+  // Allows for `flags[Flag::Foo] = true;`
+  auto operator[](T flag) -> bool & {
+    return *reinterpret_cast<bool *>(reinterpret_cast<u64>(&flags) +
+                                     static_cast<int>(flag));
+  }
+
+  auto operator~() const -> BitFlags { return BitFlags(~flags); }
+
+  auto set(T flag, bool value = true) -> void {
+    if (value)
+      flags |= (1 << static_cast<int>(flag));
+    else
+      flags &= ~(1 << static_cast<int>(flag));
+  }
+
+  auto get(T flag) const -> bool {
+    return flags & (1 << static_cast<int>(flag));
+  }
+
+  auto clear() -> void { flags = 0; }
+
+  auto operator|(T flag) const -> BitFlags { return BitFlags(flags | flag); }
+
+  auto operator&(T flag) const -> BitFlags { return BitFlags(flags & flag); }
+
+  auto operator|=(T flag) -> BitFlags & {
+    flags |= flag;
+    return *this;
+  }
+
+  auto operator&=(T flag) -> BitFlags & {
+    flags &= flag;
+    return *this;
+  }
+};
+
+} // namespace structures
+
 namespace dbg {
 
 /// @brief Demangles a C++ symbol
-auto demangle(const char *symbol) -> std::string;
+auto demangle(const u8 *symbol) -> std::string;
 
 /// @brief Demangles a C++ symbol
-static auto demangle(const std::string &symbol) -> std::string { return demangle(symbol.c_str()); }
+static auto demangle(const std::string &symbol) -> std::string {
+  return demangle(symbol.c_str());
+}
 
 /// @brief Gets the name of a type
-template <typename T> auto typeName() -> std::string { return demangle(typeid(T).name()); }
-
+template <typename T> auto typeName() -> std::string {
+  return demangle(typeid(T).name());
 }
 
-namespace sfinae {
+} // namespace dbg
 
-/// @brief Checks if a type is equatable to itself (has == operator)
-template <typename T> struct isEquatable {
-  template <typename U> static auto test(U *u) -> decltype(*u == *u);
-  template <typename U> static auto test(...) -> void;
+// namespace functional {
 
-  static constexpr bool value = !std::is_void<decltype(test<T>(nullptr))>::value;
-  using type = std::integral_constant<bool, value>;
-};
+// template <typename T,
+// typename = typename std::enable_if<sfinae::isNotVoid<T>::value>::type>
+// using Option = cxxopts::Option<T>;
 
-}
+// }
+// namespace functional
 
 namespace err {
 /// @brief Error codes
@@ -95,7 +239,7 @@ enum class ErrorKind {
 };
 
 /// @brief Describes an error kidn
-auto errKindAsString(ErrorKind kind) -> const char *;
+auto errKindAsString(ErrorKind kind) -> const i8 *;
 
 /// @brief An error with a description and kind
 struct Error {
@@ -105,10 +249,9 @@ struct Error {
 
   /// @brief Constructs an error with a description and kind
   Error(ErrorKind kind, std::string desc, bool fatal = false)
-      : kind(kind), desc(desc), fatal(fatal) {}
+      : kind(kind), desc(std::move(desc)), fatal(fatal) {}
 
-  Error(const Error &other)
-      : kind(other.kind), desc(other.desc), fatal(other.fatal) {}
+  Error(const Error &other) = default;
 
   /// @brief Prints the error
   auto print(std::ostream &out, bool printKind = true) const -> void {
@@ -125,7 +268,7 @@ struct Error {
   }
 
   /// @brief The error as a string
-  auto toString() const -> std::string {
+  auto str() const -> std::string {
     std::stringstream ss;
     print(ss);
     return ss.str();
@@ -138,127 +281,13 @@ struct Error {
     return kind == other.kind && desc == other.desc && fatal == other.fatal;
   }
 
-  auto operator!=(const Error &other) const -> bool { return !(*this == other); }
-};
-
-template <typename O, typename E>
-struct Result {
-private:
-  bool isError;
-  union {
-    O ok;
-    E err;
-  };
-
-public:
-  // allows for implicit conversion from O to Result<O, E>
-  constexpr Result(const O ok) : isError(false), ok(ok) {}
-  // allows for implicit conversion from E to Result<O, E>
-  constexpr Result(const E err) : isError(true), err(err) {}
-
-  Result(const Result &other) : isError(other.isError) {
-    if (isError) {
-      err = other.err;
-    } else {
-      ok = other.ok;
-    }
-  }
-
-  ~Result() {
-    if (isError) {
-      err.~E();
-    } else {
-      ok.~O();
-    }
-  }
-
-  static auto Ok() -> Result<void, E> { return Result<void, E>({}); }
-  static auto Ok(O ok) -> Result<O, E> { return Result<O, E>(ok); }
-  static auto Err(E err) -> Result<O, E> { return Result<O, E>(err); }
-
-  auto operator<<(std::ostream &os) -> std::ostream & {
-    if (isError)
-      return os << err;
-    else
-      return os << ok;
-  }
-
-  inline auto isOk() const -> bool { return !isError; }
-  inline auto isErr() const -> bool { return isError; }
-
-  inline auto getOk() const -> O * { return isError ? nullptr : &ok; }
-  inline auto getErr() const -> E * { return isError ? &err : nullptr; }
-
-  inline auto unwrap() const -> O {
-    if (isError)
-      Error(ErrorKind::Unwrap, "called `Result::unwrap()` on an `Err` value", true)
-          .print(std::cerr);
-    return ok;
-  }
-
-  inline auto unwrapErr() const -> E {
-    if (!isError)
-      Error(ErrorKind::Unwrap, "called `Result::unwrapErr()` on an `Ok` value", true)
-          .print(std::cerr);
-    return err;
-  }
-
-  template <typename = typename std::enable_if<!std::is_void<O>::value>::type>
-  auto unwrapOr(O other) const -> O {
-    if (isError)
-      return other;
-    return ok;
-  }
-
-  template <typename = typename std::enable_if<!std::is_void<O>::value>::type>
-  auto unwrapOrElse(std::function<O(const E &)> f) const -> O {
-    if (isError)
-      return f(err);
-    return ok;
-  }
-
-  template <typename = typename sfinae::isEquatable<O>::type,
-          typename = typename sfinae::isEquatable<E>::type>
-  auto operator==(const Result &other) const -> bool {
-    if (isError != other.isError)
-      return false;
-
-    if (isError)
-      return err == other.err;
-    else
-      return ok == other.ok;
-  }
-
-  template <typename = typename sfinae::isEquatable<O>::type,
-          typename = typename sfinae::isEquatable<E>::type>
-  auto operator!=(const Result &other) const -> bool { return !(*this == other); }
-
-  // Fallback for when O and/or E are not equatable
-  template <>
-  auto operator==(const Result &other) const -> bool {
-    DebugLog << "Result::operator== should not be used for Result<" << dbg::typeName<O>()
-             << ", " << dbg::typeName<E>() << ">" << std::endl;
-    DebugLog << "It will not effectively compare the values of the Result, only if they are "
-                "both errors or both ok" << std::endl;
-    if (isError != other.isError)
-      return false;
-    return true;
-  }
-
-  // Fallback for when O and/or E are not equatable
-  template <>
-  auto operator!=(const Result &other) const -> bool {
-    DebugLog << "Result::operator!= should not be used for Result<" << dbg::typeName<O>()
-             << ", " << dbg::typeName<E>() << ">" << std::endl;
-    DebugLog << "It will not effectively compare the values of the Result, only if they are "
-                "both errors or both ok" << std::endl;
-    if (isError != other.isError)
-      return false;
-    return true;
+  auto operator!=(const Error &other) const -> bool {
+    return !(*this == other);
   }
 };
 
-using Errors = err::Result<void, err::Error>;
+using namespace functional;
+
 } // namespace err
 
 namespace string {
@@ -294,7 +323,7 @@ auto toTitle(const std::string &str) -> std::string;
 auto trim(const std::string &str) -> std::string;
 
 /// @brief Converts a string to C-style string by copying it
-auto duplicateAsCString(const std::string &str) -> const char *;
+auto duplicateAsCString(const std::string &str) -> const i8 *;
 
 } // namespace string
 
@@ -333,6 +362,11 @@ auto home() -> std::string;
 auto search(const std::string &dir,
             const std::function<bool(const std::string &)> &matcher)
     -> std::vector<std::string>;
+
+/// @brief Writes a vector of bytes to a file
+auto writeBytes(const std::string &path, const std::vector<u8> &bytes)
+    -> Result<void, Error>;
+
 } // namespace fs
 
 namespace env {
@@ -347,13 +381,15 @@ auto getExecutablePath() -> std::string;
 
 } // namespace june
 
-static inline auto operator<<(std::ostream &os, const june::err::Error &err) -> std::ostream & {
+static inline auto operator<<(std::ostream &os, const june::err::Error &err)
+    -> std::ostream & {
   err.print(os);
   return os;
 }
 
 template <typename O, typename E>
-static inline auto operator<<(std::ostream &os, const june::err::Result<O, E> &result)
+static inline auto operator<<(std::ostream &os,
+                              const june::err::Result<O, E> &result)
     -> std::ostream & {
   if (result.isOk()) {
     os << "Ok(" << result.unwrap() << ")";
@@ -363,6 +399,5 @@ static inline auto operator<<(std::ostream &os, const june::err::Result<O, E> &r
 
   return os;
 }
-
 
 #endif
