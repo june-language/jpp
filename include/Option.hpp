@@ -1,50 +1,60 @@
-#ifndef option_hpp
-#define option_hpp
+#ifndef june_option_hpp
+#define june_option_hpp
 
 #include "SFINAE.hpp"
 #include <optional>
 #include <variant>
+#include <exception>
+#include <ostream>
+#include <string>
 
 namespace june {
 namespace functional {
 
 template <NotVoid T>
-class Option<T> {
-  bool isSome;
-  std::variant<T> value;
+class Option {
+  bool _isSome;
+
+  template <NotMonoState T>
+  using Variant = std::variant<std::monostate, T>;
+
+  template <MonoState T>
+  using Variant = std::variant<std::monostate>;
+
+  Variant<T> value;
 
 public:
-  constexpr Option() : isSome(false), value() {}
-  constexpr Option(T value) : isSome(true), value(value) {}
+  constexpr Option() : _isSome(false), value(std::monostate{}) {}
+  constexpr Option(T value_) : _isSome(true), value(value_) {}
 
   auto operator=(const Option &other) -> Option & {
-    isSome = other.isSome;
+    _isSome = other._isSome;
     value = other.value;
     return *this;
   }
 
   auto operator=(Option &&other) -> Option & {
-    isSome = other.isSome;
+    _isSome = other._isSome;
     value = other.value;
     return *this;
   }
 
-  static auto Some() -> Option<std::nullopt_t> { return Option<std::nullopt_t>::Some(); }
+  static auto Some() -> Option<std::monostate> { return Option<std::monostate>::Some(); }
   static auto Some(T value) -> Option<T> { return Option<T>::Some(value); }
   static auto None() -> Option<T> { return Option<T>::None(); }
 
   auto operator<<(std::ostream &os) -> std::ostream & {
-    if (isSome) {
-      os << "Some(" << value << ")";
+    if (_isSome) {
+      os << "Some(" << std::get<T>(value) << ")";
     } else {
       os << "None";
     }
   }
 
   auto operator==(const Option &other) -> bool {
-    if (isSome && other.isSome) {
+    if (_isSome && other._isSome) {
       return value == other.value;
-    } else if (!isSome && !other.isSome) {
+    } else if (!_isSome && !other._isSome) {
       return true;
     } else {
       return false;
@@ -55,44 +65,52 @@ public:
     return !(*this == other);
   }
 
-  inline auto isSome() const -> bool { return isSome; }
-  inline auto isNone() const -> bool { return !isSome; }
+  inline auto isSome() const -> bool { return _isSome; }
+  inline auto isNone() const -> bool { return !_isSome; }
+
+  inline auto get() const -> T * {
+    if (_isSome) {
+      return &std::get<T>(value);
+    } else {
+      return nullptr;
+    }
+  }
 
   inline auto unwrap() const -> T {
-    if (isSome) {
-      return value;
+    if (_isSome) {
+      return std::get<T>(value);
     } else {
       throw std::runtime_error("Cannot unwrap None");
     }
   }
 
   inline auto unwrapOr(T other) const -> T {
-    if (isSome) {
-      return value;
+    if (_isSome) {
+      return std::get<T>(value);
     } else {
       return other;
     }
   }
 
   inline auto unwrapOrElse(std::function<T()> other) const -> T {
-    if (isSome) {
-      return value;
+    if (_isSome) {
+      return std::get<T>(value);
     } else {
       return other();
     }
   }
 
   inline auto map(std::function<T(T)> f) const -> Option<T> {
-    if (isSome) {
-      return Option<T>::Some(f(value));
+    if (_isSome) {
+      return Option<T>::Some(f(std::get<T>(value)));
     } else {
       return Option<T>::None();
     }
   }
 
   inline auto mapOr(T other, std::function<T(T)> f) const -> T {
-    if (isSome) {
-      return f(value);
+    if (_isSome) {
+      return f(std::get<T>(value));
     } else {
       return other;
     }
@@ -100,25 +118,25 @@ public:
 
   inline auto mapOrElse(std::function<T()> other,
                         std::function<T(T)> f) const -> T {
-    if (isSome) {
-      return f(value);
+    if (_isSome) {
+      return f(std::get<T>(value));
     } else {
       return other();
     }
   }
 
   inline auto andThen(std::function<Option<T>(T)> f) const -> Option<T> {
-    if (isSome) {
-      return f(value);
+    if (_isSome) {
+      return f(std::get<T>(value));
     } else {
       return Option<T>::None();
     }
   }
 
   inline auto filter(std::function<bool(T)> f) const -> Option<T> {
-    if (isSome) {
+    if (_isSome) {
       if (f(value)) {
-        return Option<T>::Some(value);
+        return Option<T>::Some(std::get<T>(value));
       } else {
         return Option<T>::None();
       }
@@ -128,8 +146,8 @@ public:
   }
 
   inline auto expect(const std::string &msg) const -> T {
-    if (isSome) {
-      return value;
+    if (_isSome) {
+      return std::get<T>(value);
     } else {
       throw std::runtime_error(msg);
     }

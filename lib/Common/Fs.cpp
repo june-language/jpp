@@ -67,7 +67,7 @@ auto search(const std::string &dir,
   return results;
 }
 
-auto writeBytes(const std::string &path, const std::vector<u8> &bytes) -> Result<void, Error> {
+auto writeBytes(const std::string &path, const std::vector<u8> &bytes) -> Result<null, Error> {
   if (!exists(path)) {
     return Error(ErrorKind::FileIo, "Unable to write file: file does not exist");
   }
@@ -94,7 +94,7 @@ auto writeBytes(const std::string &path, const std::vector<u8> &bytes) -> Result
   }
 
   file.close();
-  return Result<void, Error>::Ok();
+  return Result<null, Error>::Ok();
 }
 
 } // namespace fs

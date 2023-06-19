@@ -1,16 +1,26 @@
 #ifndef june_result_hpp
 #define june_result_hpp
 
+#include "Option.hpp"
 #include "SFINAE.hpp"
+#include <exception>
 #include <optional>
+#include <ostream>
+#include <string>
 #include <variant>
 
 namespace june {
 namespace err {
 
+// Due to not being able to use `void` as a template parameter (see std::variant),
+// we use std::monostate as a placeholder for void. This type alias `null` is used
+// to make the code more readable and to make it easier to change the type if
+// std::monostate is no longer needed.
+using null = std::monostate;
+
 using namespace june::functional;
 
-template <typename O, typename E>
+template <NotVoid O, NotVoid E>
 struct Result {
 private:
   bool isError;
@@ -18,10 +28,9 @@ private:
   Option<E> err;
 
 public:
-  constexpr Result(const O ok) requires NotVoid<O> : isError(false), ok(ok), err(std::nullopt_t) {}
+  constexpr Result(const O ok) : isError(false), ok(ok), err() {}
 
-  template <typename = NotVoid<E>>
-  constexpr Result(const E err) : isError(true), ok(std::nullopt_t), err(err) {}
+  constexpr Result(const E err) : isError(true), ok(), err(err) {}
 
   Result(const Result &other) : isError(other.isError) {
     if (isError) {
@@ -30,20 +39,20 @@ public:
       ok = other.ok;
     }
   }
-
-  template <typename = isVoid<O>> static auto Ok() -> Result<O, E> {
-    return Result<O, E>(inner_void_t{});
+ 
+  static auto Ok() -> Result<O, E> {
+    return Result<O, E>(null{});
   }
 
-  template <typename = isVoid<E>> static auto Err() -> Result<O, E> {
-    return Result<O, E>(inner_void_t{});
+  static auto Err() -> Result<O, E> {
+    return Result<O, E>(null{});
   }
 
-  template <typename = isNotVoid<O>> static auto Ok(O ok) -> Result<O, E> {
+  static auto Ok(O ok) -> Result<O, E> requires NotMonoState<O> {
     return Result<O, E>(ok);
   }
 
-  template <typename = isNotVoid<E>> static auto Err(E err) -> Result<O, E> {
+  static auto Err(E err) -> Result<O, E> requires NotMonoState<E> {
     return Result<O, E>(err);
   }
 
@@ -56,48 +65,51 @@ public:
   inline auto isOk() const -> bool { return !isError; }
   inline auto isErr() const -> bool { return isError; }
 
-  template <typename = isNotVoid<O>> inline auto unwrap() const -> O {
+  inline auto unwrap() const -> O {
     if (isError)
       throw std::runtime_error("Called unwrap() on an error Result");
-    return ok;
+    return ok.unwrap();
   }
 
-  template <typename = isNotVoid<O>> inline auto unwrapOr(O other) const -> O {
+  inline auto unwrapErr() const -> E {
+    if (!isError)
+      throw std::runtime_error("Called unwrapErr() on an ok Result");
+    return err.unwrap();
+  }
+
+  inline auto unwrapOr(O other) const -> O requires NotMonoState<O> {
     if (isError)
       return other;
-    return ok;
+    return ok.unwrap();
   }
 
-  template <typename = isNotVoid<O>>
-  inline auto unwrapOrElse(std::function<O(E)> f) const -> O {
+  inline auto unwrapOrElse(std::function<O(E)> f) const -> O requires (NotMonoState<O> && NotMonoState<E>) {
     if (isError)
-      return f(err);
-    return ok;
+      return f(err.unwrap());
+    return ok.unwrap();
   }
 
-  template <typename = isNotVoid<O>>
-  inline auto expect(std::string msg) const -> O {
+  inline auto expect(std::string msg) const -> O requires NotMonoState<O> {
     if (isError)
       throw std::runtime_error(msg);
-    return ok;
+    return ok.unwrap();
   }
 
-  template <typename = isNotVoid<O>>
-  inline auto mapErr(std::function<E(E)> f) const -> Result<O, E> {
+  inline auto mapErr(std::function<E(E)> f) const -> Result<O, E> requires NotMonoState<E> {
     if (isError)
       return Result<O, E>(f(err));
     return Result<O, E>(ok);
   }
 
-  template <typename = isNotVoid<O>> inline auto getOk() const -> O * {
+  inline auto getOk() const -> O * requires NotMonoState<O> {
     if (isError)
       return nullptr;
-    return &ok;
+    return ok.get();
   }
 
-  template <typename = isNotVoid<E>> inline auto getErr() const -> E * {
+  inline auto getErr() const -> E * requires NotMonoState<E> {
     if (isError)
-      return &err;
+      return err.get();
     return nullptr;
   }
 
@@ -112,9 +124,9 @@ public:
   auto operator!=(const Result &other) const -> bool {
     return !(*this == other);
   }
-}
+};
 
-using Errors = err::Result<void, std::string>;
+using Errors = err::Result<null, std::string>;
 
 } // namespace err
 } // namespace june

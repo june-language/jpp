@@ -193,6 +193,26 @@ public:
   }
 };
 
+/// @brief An alertantive to std::views::values
+template <typename K, typename V>
+auto values(const std::unordered_map<K, V> &map) -> std::vector<V> {
+  std::vector<V> values;
+  values.reserve(map.size());
+  for (const auto &[_, value] : map)
+    values.push_back(value);
+  return values;
+}
+
+/// @brief An alternative to std::views::keys
+template <typename K, typename V>
+auto keys(const std::unordered_map<K, V> &map) -> std::vector<K> {
+  std::vector<K> keys;
+  keys.reserve(map.size());
+  for (const auto &[key, _] : map)
+    keys.push_back(key);
+  return keys;
+}
+
 } // namespace structures
 
 namespace dbg {
@@ -211,15 +231,6 @@ template <typename T> auto typeName() -> std::string {
 }
 
 } // namespace dbg
-
-// namespace functional {
-
-// template <typename T,
-// typename = typename std::enable_if<sfinae::isNotVoid<T>::value>::type>
-// using Option = cxxopts::Option<T>;
-
-// }
-// namespace functional
 
 namespace err {
 /// @brief Error codes
@@ -365,7 +376,7 @@ auto search(const std::string &dir,
 
 /// @brief Writes a vector of bytes to a file
 auto writeBytes(const std::string &path, const std::vector<u8> &bytes)
-    -> Result<void, Error>;
+    -> Result<null, Error>;
 
 } // namespace fs
 
@@ -381,12 +392,14 @@ auto getExecutablePath() -> std::string;
 
 } // namespace june
 
+// Error `<<` operator
 static inline auto operator<<(std::ostream &os, const june::err::Error &err)
     -> std::ostream & {
   err.print(os);
   return os;
 }
 
+// Result `<<` operator
 template <typename O, typename E>
 static inline auto operator<<(std::ostream &os,
                               const june::err::Result<O, E> &result)

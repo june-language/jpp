@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <type_traits>
+#include <variant>
 
 template <typename T>
 concept Equatable = requires(T a, T b) {
@@ -17,16 +18,29 @@ concept Hashable = requires(T a) {
 };
 
 template <typename T>
+concept MonoState = requires() {
+  { std::is_same<T, std::monostate>::value } -> std::convertible_to<bool>;
+};
+
+template <typename T>
+concept NotMonoState = requires() {
+  { !std::is_same<T, std::monostate>::value } -> std::convertible_to<bool>;
+};
+
+template <typename T>
 concept Void = requires() {
   { std::is_void<T>::value }
+  ->std::convertible_to<bool>;
+  { std::is_same<std::is_void<T>, std::true_type>::value }
   ->std::convertible_to<bool>;
 };
 
 template <typename T>
 concept NotVoid = requires() {
-  { std::is_void<T>::value }
-  ->std::convertible_to<bool>;
   { !std::is_void<T>::value }
+  ->std::convertible_to<bool>;
+  { std::is_same<std::is_void<T>, std::false_type>::value }
+  ->std::convertible_to<bool>;
 };
 
 #endif

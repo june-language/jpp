@@ -1,187 +1,196 @@
-cmake_minimum_required(VERSION 3.19.6)
+  cmake_minimum_required(VERSION 3.19.6)
 
-project(June C CXX)
+  project(June C CXX)
 
-# Honour CMAKE_CXX_STANDARD in try_compile(), needed for check_cxx_native_regex.
-if(POLICY CMP0067)
-  cmake_policy(SET CMP0067 NEW)
-endif()
-
-# Convert relative paths to absolute for subdirectory `target_sources`
-if(POLICY CMP0076)
-  cmake_policy(SET CMP0076 NEW)
-endif()
-
-# Don't clobber existing variable values when evaluating `option()` declarations.
-if(POLICY CMP0077)
-  cmake_policy(SET CMP0077 NEW)
-endif()
-
-# Clobber existing timestamps of extracted files when using `ExternalProject_Add()`.
-if(POLICY CMP0135)
-  cmake_policy(SET CMP0135 NEW)
-endif()
-
-option(JUNE_CROSS_COMPILE "Enable cross-compiling" OFF)
-set(JUNE_CROSS_COMPILE_TARGET "arm-linux-gnueabihf" CACHE STRING "Target platform")
-set(JUNE_CROSS_COMPILE_SYSTEM "Linux" CACHE STRING "System to cross-compile for")
-set(JUNE_CROSS_COMPILE_PROCESSOR "arm" CACHE STRING "Processor to cross-compile for")
-
-option(JUNE_DEBUG "Enable debug build" ON)
-
-if(DEFINED ENV{PREFIX_DIR} AND NOT "$ENV{PREFIX_DIR}" STREQUAL "" AND NOT EXISTS "${JUNE_CROSS_COMPILE}")
-	set(CMAKE_INSTALL_PREFIX "$ENV{PREFIX_DIR}")
-else()
-	set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/.june")
-endif()
-set(CMAKE_PREFIX_PATH "${CMAKE_INSTALL_PREFIX};${CMAKE_BINARY_DIR}")
-include_directories(${PROJECT_SOURCE_DIR}/include)
-add_definitions(-DINSTALL_PREFIX=${CMAKE_INSTALL_PREFIX})
-message("-- Using PREFIX = ${CMAKE_INSTALL_PREFIX}")
-
-# Module Setup
-set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${PROJECT_SOURCE_DIR}/cmake")
-
-include(JuneTargets)
-
-# macOS RPath fix
-set(ORIGIN "$ORIGIN")
-if(APPLE)
-	set(ORIGIN "@loader_path")
-endif()
-set(CMAKE_INSTALL_RPATH "${ORIGIN}/../lib/june;${ORIGIN}/../lib;${ORIGIN}/.")
-set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR TRUE)
-set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-set(CMAKE_MACOSX_RPATH TRUE)
-
-# C++ standard
-set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ standard to conform to")
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
-# Build type
-if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  set(CMAKE_BUILD_TYPE "Debug" CACHE STRING
-    "Build type for June [Debug, RelWithDebInfo, Release]"
-    FORCE)
-  message(STATUS "No build type was specified, will default to ${CMAKE_BUILD_TYPE}")
-endif()
-
-if(${CMAKE_SYSTEM_NAME} MATCHES ".*BSD.*")
-	add_definitions(-D_WITH_GETLINE)
-endif()
-
-if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR "${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
-  message(STATUS "Building with debug info...")
-  add_definitions(-DDEBUG_INFO)
-endif()
-
-if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release" OR "${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
-  message(STATUS "Building for release...")
-  # add_definitions(-DRELEASE_MODE)
-endif()
-
-# Fixes issue with -fPIC not appearing in compiler flags
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-# Cross-compiling
-if("${JUNE_CROSS_COMPILE}")
-  # Check if clang/clang++ is available on the system
-  if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    message(FATAL_ERROR "Clang is required to cross-compile")
+  # Honour CMAKE_CXX_STANDARD in try_compile(), needed for check_cxx_native_regex.
+  if(POLICY CMP0067)
+    cmake_policy(SET CMP0067 NEW)
   endif()
 
-  message(STATUS "Setting up cross-compiler...")
-  message(STATUS "Target platform: ${JUNE_CROSS_COMPILE_TARGET}")
-  message(STATUS "System: ${JUNE_CROSS_COMPILE_SYSTEM}")
-  message(STATUS "Processor: ${JUNE_CROSS_COMPILE_PROCESSOR}")
-  message(STATUS "Sysroot: ${CMAKE_SYSROOT}")
+  # Convert relative paths to absolute for subdirectory `target_sources`
+  if(POLICY CMP0076)
+    cmake_policy(SET CMP0076 NEW)
+  endif()
+
+  # Don't clobber existing variable values when evaluating `option()` declarations.
+  if(POLICY CMP0077)
+    cmake_policy(SET CMP0077 NEW)
+  endif()
+
+  # Clobber existing timestamps of extracted files when using `ExternalProject_Add()`.
+  if(POLICY CMP0135)
+    cmake_policy(SET CMP0135 NEW)
+  endif()
+
+  option(FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." TRUE)
+  if(${FORCE_COLORED_OUTPUT})
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+      add_compile_options(-fdiagnostics-color=always)
+    elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+      add_compile_options(-fcolor-diagnostics)
+    endif()
+  endif()
+
+  option(JUNE_CROSS_COMPILE "Enable cross-compiling" OFF)
+  set(JUNE_CROSS_COMPILE_TARGET "arm-linux-gnueabihf" CACHE STRING "Target platform")
+  set(JUNE_CROSS_COMPILE_SYSTEM "Linux" CACHE STRING "System to cross-compile for")
+  set(JUNE_CROSS_COMPILE_PROCESSOR "arm" CACHE STRING "Processor to cross-compile for")
+
+  option(JUNE_DEBUG "Enable debug build" ON)
+
+  if(DEFINED ENV{PREFIX_DIR} AND NOT "$ENV{PREFIX_DIR}" STREQUAL "" AND NOT EXISTS "${JUNE_CROSS_COMPILE}")
+    set(CMAKE_INSTALL_PREFIX "$ENV{PREFIX_DIR}")
+  else()
+    set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/.june")
+  endif()
+  set(CMAKE_PREFIX_PATH "${CMAKE_INSTALL_PREFIX};${CMAKE_BINARY_DIR}")
+  include_directories(${PROJECT_SOURCE_DIR}/include)
+  add_definitions(-DINSTALL_PREFIX=${CMAKE_INSTALL_PREFIX})
+  message("-- Using PREFIX = ${CMAKE_INSTALL_PREFIX}")
+
+  # Module Setup
+  set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${PROJECT_SOURCE_DIR}/cmake")
+
+  include(JuneTargets)
+
+  # macOS RPath fix
+  set(ORIGIN "$ORIGIN")
+  if(APPLE)
+    set(ORIGIN "@loader_path")
+  endif()
+  set(CMAKE_INSTALL_RPATH "${ORIGIN}/../lib/june;${ORIGIN}/../lib;${ORIGIN}/.")
+  set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR TRUE)
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+  set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+  set(CMAKE_MACOSX_RPATH TRUE)
+
+  # C++ standard
+  set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ standard to conform to")
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+  set(CMAKE_CXX_EXTENSIONS OFF)
+
+  # Build type
+  if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING
+      "Build type for June [Debug, RelWithDebInfo, Release]"
+      FORCE)
+    message(STATUS "No build type was specified, will default to ${CMAKE_BUILD_TYPE}")
+  endif()
+
+  if(${CMAKE_SYSTEM_NAME} MATCHES ".*BSD.*")
+    add_definitions(-D_WITH_GETLINE)
+  endif()
+
+  if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR "${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
+    message(STATUS "Building with debug info...")
+    add_definitions(-DDEBUG_INFO)
+  endif()
+
+  if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release" OR "${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
+    message(STATUS "Building for release...")
+    # add_definitions(-DRELEASE_MODE)
+  endif()
+
+  # Fixes issue with -fPIC not appearing in compiler flags
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+  # Cross-compiling
+  if("${JUNE_CROSS_COMPILE}")
+    # Check if clang/clang++ is available on the system
+    if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      message(FATAL_ERROR "Clang is required to cross-compile")
+    endif()
+
+    message(STATUS "Setting up cross-compiler...")
+    message(STATUS "Target platform: ${JUNE_CROSS_COMPILE_TARGET}")
+    message(STATUS "System: ${JUNE_CROSS_COMPILE_SYSTEM}")
+    message(STATUS "Processor: ${JUNE_CROSS_COMPILE_PROCESSOR}")
+    message(STATUS "Sysroot: ${CMAKE_SYSROOT}")
 
 
-  set(CMAKE_SYSTEM_NAME ${JUNE_CROSS_COMPILE_SYSTEM})
-  set(CMAKE_SYSTEM_PROCESSOR ${JUNE_CROSS_COMPILE_PROCESSOR})
+    set(CMAKE_SYSTEM_NAME ${JUNE_CROSS_COMPILE_SYSTEM})
+    set(CMAKE_SYSTEM_PROCESSOR ${JUNE_CROSS_COMPILE_PROCESSOR})
 
-  set(CMAKE_C_COMPILER clang)
-  set(CMAKE_CXX_COMPILER clang++)
-  set(CMAKE_C_COMPILER_TARGET ${JUNE_CROSS_COMPILE_TARGET})
-  set(CMAKE_CXX_COMPILER_TARGET ${JUNE_CROSS_COMPILE_TARGET})
-endif()
+    set(CMAKE_C_COMPILER clang)
+    set(CMAKE_CXX_COMPILER clang++)
+    set(CMAKE_C_COMPILER_TARGET ${JUNE_CROSS_COMPILE_TARGET})
+    set(CMAKE_CXX_COMPILER_TARGET ${JUNE_CROSS_COMPILE_TARGET})
+  endif()
 
-set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
+  set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
 
-# Config
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(JUNE_VERSION "0.1")
-set(JUNE_V_MAJOR 0)
-set(JUNE_V_MINOR 1)
-set(JUNE_V_PATCH 0)
+  # Config
+  set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+  set(JUNE_VERSION "0.1")
+  set(JUNE_V_MAJOR 0)
+  set(JUNE_V_MINOR 1)
+  set(JUNE_V_PATCH 0)
 
-execute_process(COMMAND date +"%Y-%m-%d" OUTPUT_VARIABLE BUILD_DATE OUTPUT_STRIP_TRAILING_WHITESPACE)
-execute_process(COMMAND git rev-parse --short HEAD OUTPUT_VARIABLE GIT_REVISION OUTPUT_STRIP_TRAILING_WHITESPACE)
-if (JUNE_DEBUG)
-  set(JUNE_IS_DEBUG true)
-else()
-  set(JUNE_IS_DEBUG false)
-endif()
-configure_file("${PROJECT_SOURCE_DIR}/include/JuneConfig.hpp.in" "${PROJECT_SOURCE_DIR}/include/JuneConfig.hpp" @ONLY)
+  execute_process(COMMAND date +"%Y-%m-%d" OUTPUT_VARIABLE BUILD_DATE OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process(COMMAND git rev-parse --short HEAD OUTPUT_VARIABLE GIT_REVISION OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if (JUNE_DEBUG)
+    set(JUNE_IS_DEBUG true)
+  else()
+    set(JUNE_IS_DEBUG false)
+  endif()
+  configure_file("${PROJECT_SOURCE_DIR}/include/JuneConfig.hpp.in" "${PROJECT_SOURCE_DIR}/include/JuneConfig.hpp" @ONLY)
 
-# For libGMP on macOS and BSD
-if(APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES ".*BSD.*")
-  include_directories(/usr/local/include)
-endif()
+  # For libGMP on macOS and BSD
+  if(APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES ".*BSD.*")
+    include_directories(/usr/local/include)
+  endif()
 
-set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
-if(CMAKE_USE_PTHREADS_INIT)
-  message("-- Using thread flags: -pthread")
-  set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -pthread")
-  set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -pthread")
-else()
-  message("-- Using thread flags: ${CMAKE_THREAD_LIBS_INIT}")
-  set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
-  set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
-endif()
+  set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+  set(THREADS_PREFER_PTHREAD_FLAG ON)
+  find_package(Threads REQUIRED)
+  if(CMAKE_USE_PTHREADS_INIT)
+    message("-- Using thread flags: -pthread")
+    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -pthread")
+    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -pthread")
+  else()
+    message("-- Using thread flags: ${CMAKE_THREAD_LIBS_INIT}")
+    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
+    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
+  endif()
 
-find_program(CCACHE_PROGRAM ccache)
-if(CCACHE_PROGRAM)
-  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
-  message("-- Using ccache")
-endif()
+  find_program(CCACHE_PROGRAM ccache)
+  if(CCACHE_PROGRAM)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
+    message("-- Using ccache")
+  endif()
 
-# FetchContent
-include(FetchContent)
-FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/2491710524094dc3b77cfa4e8eda2ba8edb0d91c.zip
-)
+  # FetchContent
+  include(FetchContent)
+  FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/2491710524094dc3b77cfa4e8eda2ba8edb0d91c.zip
+  )
 
-FetchContent_Declare(
-  nanobench
-  GIT_REPOSITORY https://github.com/martinus/nanobench.git
-  GIT_TAG v4.1.0
-  GIT_SHALLOW TRUE
-)
+  FetchContent_Declare(
+    nanobench
+    GIT_REPOSITORY https://github.com/martinus/nanobench.git
+    GIT_TAG v4.1.0
+    GIT_SHALLOW TRUE
+  )
 
-# Windows: Prevent overriding the parent project's compiler/linker settings
-set(g_test_force_shared_crt ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(googletest)
-FetchContent_MakeAvailable(nanobench)
+  # Windows: Prevent overriding the parent project's compiler/linker settings
+  set(g_test_force_shared_crt ON CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(googletest)
+  FetchContent_MakeAvailable(nanobench)
 
-enable_testing()
+  enable_testing()
 
-# Install CMake modules
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/cmake/"
-	DESTINATION "${CMAKE_INSTALL_PREFIX}/cmake/"
-)
+  # Install CMake modules
+  install(DIRECTORY "${CMAKE_SOURCE_DIR}/cmake/"
+    DESTINATION "${CMAKE_INSTALL_PREFIX}/cmake/"
+  )
 
-# Install Includes
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/"
-	DESTINATION "${CMAKE_INSTALL_PREFIX}/include/june"
-)
+  # Install Includes
+  install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/"
+    DESTINATION "${CMAKE_INSTALL_PREFIX}/include/june"
+  )
 
-# Add vendor libraries
-add_subdirectory(vendor)
+  # Add vendor libraries
+  add_subdirectory(vendor)
 
-add_subdirectory(lib)
+  add_subdirectory(lib)

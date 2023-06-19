@@ -20,7 +20,9 @@ SrcFile::SrcFile(const std::string &dir, const std::string &path,
 
 using namespace err;
 
-Error SrcFile::loadFile() {}
+Errors SrcFile::loadFile() {
+  return Errors::Ok();
+}
 
 } // namespace vm
 } // namespace june

@@ -26,7 +26,7 @@ public:
   SrcFile(const std::string &dir, const std::string &path,
           const bool isMain = false);
 
-  auto loadFile() -> err::Error;
+  auto loadFile() -> err::Errors;
   auto addByetcode(const std::vector<Op> &bc) -> void;
   auto snippetForOpIndex(const u64 &idx) const -> std::string;
 

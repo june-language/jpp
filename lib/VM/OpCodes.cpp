@@ -145,9 +145,7 @@ auto Bytecode::toBytes() -> std::vector<u8> {
   auto dataSizeBytes = june::byteorder::toBytes(june::byteorder::toBigEndian64(data.size()));
   bytes.insert(bytes.end(), dataSizeBytes.begin(), dataSizeBytes.end());
 
-  auto v = std::views::values(data);
-  std::vector<DataPair> values { v.begin(), v.end() };
-  
+  auto values = june::structures::values(data);
   for (const auto &[data, dataType] : values) {
     std::vector<u8> dBytes;
     bytes.push_back((u8)dataType);

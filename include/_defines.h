@@ -1,6 +1,8 @@
 #ifndef _defines_h
 #define _defines_h
 
+#include <stdint.h>
+
 #if defined(_WIN32) || defined(_WIN64)
 #define JUNE_WINDOWS
 #elif defined(__APPLE__) || defined(__MACH__)
