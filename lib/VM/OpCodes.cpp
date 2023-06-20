@@ -1,4 +1,5 @@
 #include "VM/OpCodes.hpp"
+#include "VM/Memory.hpp"
 
 namespace june {
 namespace vm {
@@ -33,6 +34,22 @@ auto Op::str() const -> std::string {
 }
 
 // Bytecode
+
+Bytecode::~Bytecode() {
+  using namespace june::mem;
+
+  for (auto &op : bytecode) {
+    auto data = this->data.find(op.dataIdx);
+    if (data != this->data.end()) {
+      if (data->second.second != OpDataType::Size &&
+          data->second.second != OpDataType::Bool &&
+          data->second.second != OpDataType::Nil) {
+        mem::free(data->second.first.s,
+                  mem::mult8RoundUp(strlen(data->second.first.s) + 1));
+      }
+    }
+  }
+}
 
 auto Bytecode::insertData(const OpDataType &type, const OpData &data_)
     -> u64 {

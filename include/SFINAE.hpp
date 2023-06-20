@@ -18,12 +18,12 @@ concept Hashable = requires(T a) {
 };
 
 template <typename T>
-concept MonoState = requires() {
+concept Nullopt = requires() {
   { std::is_same<T, std::monostate>::value } -> std::convertible_to<bool>;
 };
 
 template <typename T>
-concept NotMonoState = requires() {
+concept NotNullopt = requires() {
   { !std::is_same<T, std::monostate>::value } -> std::convertible_to<bool>;
 };
 

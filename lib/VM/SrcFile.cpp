@@ -21,7 +21,7 @@ SrcFile::SrcFile(const std::string &dir, const std::string &path,
 using namespace err;
 
 Errors SrcFile::loadFile() {
-  return Errors::Ok();
+  return {};
 }
 
 } // namespace vm

@@ -23,7 +23,7 @@ static auto mult8RoundUp(const u64 size) -> const u64 {
   return (size + 7) & ~7;
 }
 
-// MARK: Generic Allocator
+// Generic Allocator
 
 class Allocator {
 protected:
@@ -54,7 +54,7 @@ public:
   virtual auto free(void *ptr, u64 size) -> void = 0;
 };
 
-// MARK: PoolAllocator
+// PoolAllocator
 
 struct MemoryPool {
   u8 *head;
@@ -92,7 +92,7 @@ public:
   auto free(void *ptr, u64 size) -> void override;
 };
 
-// MARK: Memory management simplified interface
+// Memory management simplified interface
 
 static Allocator *allocator = new PoolAllocator();
 

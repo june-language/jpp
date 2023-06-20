@@ -376,7 +376,7 @@ auto search(const std::string &dir,
 
 /// @brief Writes a vector of bytes to a file
 auto writeBytes(const std::string &path, const std::vector<u8> &bytes)
-    -> Result<null, Error>;
+    -> Result<void, Error>;
 
 } // namespace fs
 

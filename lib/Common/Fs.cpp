@@ -10,10 +10,20 @@ using namespace june::err;
 auto readFile(const std::string &path) -> Result<std::string, Error> {
   std::filesystem::path p(path);
   if (!std::filesystem::exists(p)) {
-    return Error(ErrorKind::FileIo, "Unable to read file: file does not exist");
+    return bws::fail(Error(ErrorKind::FileIo, "Unable to read file: file does not exist"));
   }
 
-  return std::string("");
+  std::ifstream file;
+  file.open(path, std::ios::in | std::ios::binary);
+  file.seekg(0, std::ios::end);
+  auto size = file.tellg();
+  file.seekg(0, std::ios::beg);
+
+  std::string contents;
+  contents.resize(size);
+  file.read(&contents[0], size);
+
+  return contents;
 }
 
 auto exists(const std::string &path) -> bool {
@@ -67,34 +77,34 @@ auto search(const std::string &dir,
   return results;
 }
 
-auto writeBytes(const std::string &path, const std::vector<u8> &bytes) -> Result<null, Error> {
+auto writeBytes(const std::string &path, const std::vector<u8> &bytes) -> Result<void, Error> {
   if (!exists(path)) {
-    return Error(ErrorKind::FileIo, "Unable to write file: file does not exist");
+    return bws::fail(Error(ErrorKind::FileIo, "Unable to write file: file does not exist"));
   }
 
   if (bytes.size() == 0) {
-    return Error(ErrorKind::FileIo, "Unable to write file: no bytes to write");
+    return bws::fail(Error(ErrorKind::FileIo, "Unable to write file: no bytes to write"));
   }
 
   if (isDir(path)) {
-    return Error(ErrorKind::FileIo, "Unable to write file: path is a directory");
+    return bws::fail(Error(ErrorKind::FileIo, "Unable to write file: path is a directory"));
   }
 
   std::ofstream file;
   file.open(path, std::ios::out | std::ios::binary);
 
   if (!file.is_open()) {
-    return Error(ErrorKind::FileIo, "Unable to write file: unable to open file");
+    return bws::fail(Error(ErrorKind::FileIo, "Unable to write file: unable to open file"));
   }
 
   file.write((char *)bytes.data(), bytes.size());
 
   if (file.bad()) {
-    return Error(ErrorKind::FileIo, "Unable to write file: unable to write to file");
+    return bws::fail(Error(ErrorKind::FileIo, "Unable to write file: unable to write to file"));
   }
 
   file.close();
-  return Result<null, Error>::Ok();
+  return {};
 }
 
 } // namespace fs

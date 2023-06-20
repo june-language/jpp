@@ -15,7 +15,7 @@ auto DylibManager::load(const std::string &file)
     -> Result<void *, std::string> {
   auto *handle = dlopen(file.c_str(), RTLD_LAZY);
   if (handle == nullptr) {
-    return std::string(dlerror());
+    return bws::fail(std::string(dlerror()));
   }
   handles[file] = handle;
   return handle;

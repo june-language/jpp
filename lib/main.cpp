@@ -45,7 +45,7 @@ auto main(i32 argc, i8 **argv) -> i32 {
   june::vm::Bytecode bc;
   bc.addNil(0, june::vm::Ops::Return);
 
-  june::fs::writeBytes("test.jbc", bc.toBytes());
+  june::fs::writeBytes("test.jbc", bc.toBytes()).expect("failed to write file");
 
   std::cout << "Done" << std::endl;
 

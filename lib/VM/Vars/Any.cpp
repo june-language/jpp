@@ -10,9 +10,9 @@ Any::Any(Option<TypeId> typeId, Option<Base *> val, const u64 &srcId,
   _typeId = typeId;
 
   // should underlying values determine the srcId and idx?
-  if (_val.has_value()) {
-    setSrcId(_val.value()->srcId());
-    setIdx(_val.value()->idx());
+  if (_val.isSome()) {
+    setSrcId(_val.unwrap()->srcId());
+    setIdx(_val.unwrap()->idx());
   } else {
     setSrcId(srcId);
     setIdx(idx);
