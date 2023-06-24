@@ -34,10 +34,6 @@ System memory is managed by the OS and C++. This includes in-vm memory as a subs
 
 TODO: Document the memory management happening for the VM
 
-## How is all system memory managed in June?
-
-TODO: Document the memory management happening for the entire system
-
 ### Is it reliable?
 
 Well... is it? TODO.

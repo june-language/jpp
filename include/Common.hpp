@@ -67,6 +67,13 @@ template <typename T> auto toBytes(T val) -> std::vector<u8> {
   return bytes;
 }
 
+/// @brief Converts a string to a u8 array
+static inline auto toBytes(const std::string &str) -> std::vector<u8> {
+  std::vector<u8> bytes(str.size());
+  std::memcpy(bytes.data(), str.data(), str.size());
+  return bytes;
+}
+
 /// @brief Converts a 16-bit integer from native to big endian
 static inline auto toBigEndian16(u16 val) -> u16 {
   if constexpr (endian::native == endian::big)
@@ -262,6 +269,9 @@ struct Error {
   Error(ErrorKind kind, std::string desc, bool fatal = false)
       : kind(kind), desc(std::move(desc)), fatal(fatal) {}
 
+  /// @brief Empty error
+  Error() : kind(ErrorKind::None), desc(""), fatal(false) {}
+
   Error(const Error &other) = default;
 
   /// @brief Prints the error
@@ -375,7 +385,7 @@ auto search(const std::string &dir,
     -> std::vector<std::string>;
 
 /// @brief Writes a vector of bytes to a file
-auto writeBytes(const std::string &path, const std::vector<u8> &bytes)
+auto writeBytes(const std::string &path, const std::vector<u8> &bytes, bool createFile = true)
     -> Result<void, Error>;
 
 } // namespace fs

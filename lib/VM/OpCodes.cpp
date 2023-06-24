@@ -174,10 +174,12 @@ auto Bytecode::toBytes() -> std::vector<u8> {
     case OpDataType::Float:
     case OpDataType::String:
     case OpDataType::Ident:
-      dBytes = june::byteorder::toBytes(june::byteorder::toBigEndian64((u64)data.s));
+      dBytes = june::byteorder::toBytes((const std::string&)data.s);
       break;
     case OpDataType::Bool:
       dBytes.push_back((u8)data.b);
+      break;
+    case OpDataType::Nil:
       break;
     default:
       JUNE_UNREACHABLE;

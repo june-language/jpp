@@ -77,9 +77,15 @@ auto search(const std::string &dir,
   return results;
 }
 
-auto writeBytes(const std::string &path, const std::vector<u8> &bytes) -> Result<void, Error> {
-  if (!exists(path)) {
+auto writeBytes(const std::string &path, const std::vector<u8> &bytes, bool createFile) -> Result<void, Error> {
+  if (!exists(path) && !createFile) {
     return bws::fail(Error(ErrorKind::FileIo, "Unable to write file: file does not exist"));
+  }
+
+  if (!exists(path) && createFile) {
+    std::ofstream file;
+    file.open(path, std::ios::out | std::ios::binary);
+    file.close();
   }
 
   if (bytes.size() == 0) {
