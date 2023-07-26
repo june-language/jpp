@@ -26,6 +26,22 @@ auto readFile(const std::string &path) -> Result<std::string, Error> {
   return contents;
 }
 
+auto readFileBytes(const std::string &path) -> Result<std::vector<u8>, Error> {
+  std::filesystem::path p(path);
+  if (!std::filesystem::exists(p)) {
+    return bws::fail(Error(ErrorKind::FileIo, "Unable to read file: file does not exist"));
+  }
+
+  std::ifstream file;
+  file.open(path, std::ios::in | std::ios::binary);
+
+  std::vector<u8> contents;
+  contents.resize(std::filesystem::file_size(p));
+  file.read((char *)contents.data(), contents.size());
+
+  return contents;
+}
+
 auto exists(const std::string &path) -> bool {
   return std::filesystem::exists(std::filesystem::path(path));
 }

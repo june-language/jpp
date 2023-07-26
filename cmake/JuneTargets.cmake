@@ -137,6 +137,7 @@ function(newJuneTarget targetName)
   endif()
 endfunction()
 
+# newJuneTest
 function(newJuneTest testName)
   cmake_parse_arguments(JT "TEST;BENCH" "AGAINST" "SOURCES" ${ARGN})
 

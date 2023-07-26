@@ -47,7 +47,6 @@ using f64 = double;
 namespace june {
 
 namespace byteorder {
-// all functions are from native to the specified endianness
 
 enum class endian {
   little = 0,
@@ -57,6 +56,31 @@ enum class endian {
 #else
   native = big,
 #endif
+};
+
+/// @brief Byte reader for reading bytes from a vector
+struct ByteReader {
+  u64 pos = 0;
+  u64 len = 0;
+  std::vector<u8> bytes;
+
+  ByteReader(const std::vector<u8> &bytes) : bytes(bytes), len(bytes.size()) {}
+
+  template <typename T> auto read() -> T {
+    static_assert(std::is_integral_v<T>, "T must be an integral type");
+    assert(pos + sizeof(T) <= len && "Invalid read");
+    T val;
+    std::memcpy(&val, bytes.data() + pos, sizeof(T));
+    pos += sizeof(T);
+    return val;
+  }
+
+  auto readString(u64 stringLength) -> const char * {
+    assert(pos + stringLength <= len && "Invalid read");
+    const char *val = (const char *)(bytes.data() + pos);
+    pos += stringLength;
+    return val;
+  }
 };
 
 /// @brief Converts data to a u8 array
@@ -74,36 +98,63 @@ static inline auto toBytes(const std::string &str) -> std::vector<u8> {
   return bytes;
 }
 
-/// @brief Converts a 16-bit integer from native to big endian
-static inline auto toBigEndian16(u16 val) -> u16 {
+/// @brief Converts a u8 array to data
+template <typename T> auto fromBytes(const std::vector<u8> &bytes, u64 start = 0, u64 size = 0) -> T {
+  if (size == 0)
+    size = sizeof(T);
+  assert(start + size <= bytes.size() && "Invalid start/size");
+  T val;
+  std::memcpy(&val, bytes.data() + start, size);
+  return val;
+}
+
+/// @brief Converts a u8 array to a string
+static inline auto fromBytes(const std::vector<u8> &bytes, u64 start = 0, u64 size = 0) -> std::string {
+  if (size == 0)
+    size = bytes.size() - start;
+  assert(start + size <= bytes.size() && "Invalid start/size");
+  std::string str(size, '\0');
+  std::memcpy(str.data(), bytes.data() + start, size);
+  return str;
+}
+
+/// @brief Converts a 16-bit integer to/from native to big endian
+static inline auto swapBigEndian16(u16 val) -> u16 {
   if constexpr (endian::native == endian::big)
     return val;
   return JUNE_BSWAP16(val);
 }
 
-/// @brief Converts a 32-bit integer from native to big endian
-static inline auto toBigEndian32(u32 val) -> u32 {
+/// @brief Converts a 32-bit integer to/from native to big endian
+static inline auto swapBigEndian32(u32 val) -> u32 {
   if constexpr (endian::native == endian::big)
     return val;
   return JUNE_BSWAP32(val);
 }
 
-/// @brief Converts a 64-bit integer from native to big endian
-static inline auto toBigEndian64(u64 val) -> u64 {
+/// @brief Converts a 64-bit integer to/from native to big endian
+static inline auto swapBigEndian64(u64 val) -> u64 {
   if constexpr (endian::native == endian::big)
     return val;
   return JUNE_BSWAP64(val);
 }
 
-/// @brief Converts a 32-bit float from native to big endian
-static inline auto toBigEndian32F(f32 val) -> f64 {
+/// @brief Converts a 64-bit signed integer to/from native to big endian
+static inline auto swapBigEndian64Signed(i64 val) -> i64 {
+  if constexpr (endian::native == endian::big)
+    return val;
+  return JUNE_BSWAP64(val);
+}
+
+/// @brief Converts a 32-bit float to/from native to big endian
+static inline auto swapBigEndian32F(f32 val) -> f64 {
   if constexpr (endian::native == endian::big)
     return val;
   return JUNE_BSWAP32F(val);
 }
 
-/// @brief Converts a 64-bit float from native to big endian
-static inline auto toBigEndian64F(f64 val) -> f64 {
+/// @brief Converts a 64-bit float to/from native to big endian
+static inline auto swapBigEndian64F(f64 val) -> f64 {
   if constexpr (endian::native == endian::big)
     return val;
   return JUNE_BSWAP64F(val);
@@ -305,6 +356,11 @@ struct Error {
   auto operator!=(const Error &other) const -> bool {
     return !(*this == other);
   }
+
+  friend auto operator<<(std::ostream &out, const Error &err) -> std::ostream & {
+    err.print(out);
+    return out;
+  }
 };
 
 using namespace functional;
@@ -357,6 +413,9 @@ const int kMaxPathChars = 1024;
 /// @brief Reads a file into a string
 auto readFile(const std::string &path) -> Result<std::string, Error>;
 
+/// @brief Reads a file into an array of bytes
+auto readFileBytes(const std::string &path) -> Result<std::vector<u8>, Error>;
+
 /// @brief Checks if a file exists
 auto exists(const std::string &path) -> bool;
 
@@ -401,26 +460,5 @@ auto getExecutablePath() -> std::string;
 } // namespace env
 
 } // namespace june
-
-// Error `<<` operator
-static inline auto operator<<(std::ostream &os, const june::err::Error &err)
-    -> std::ostream & {
-  err.print(os);
-  return os;
-}
-
-// Result `<<` operator
-template <typename O, typename E>
-static inline auto operator<<(std::ostream &os,
-                              const june::err::Result<O, E> &result)
-    -> std::ostream & {
-  if (result.isOk()) {
-    os << "Ok(" << result.unwrap() << ")";
-  } else {
-    os << "Err(" << result.unwrapErr() << ")";
-  }
-
-  return os;
-}
 
 #endif

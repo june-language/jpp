@@ -3,7 +3,7 @@
 namespace june {
 namespace vars {
 
-Float::Float(const double &val, const u64 &srcId, const u64 &idx)
+Float::Float(const f64 &val, const u64 &srcId, const u64 &idx)
     : Base(TypeId::Of<Float>("Float"), srcId, idx, false, false), _val(val) {}
 
 auto Float::clone(const u64 &srcId, const u64 &idx) -> Base * {
@@ -18,7 +18,7 @@ auto Float::set(Base *from) -> void {
   }
 }
 
-auto Float::get() -> double & { return _val; }
+auto Float::get() -> f64 & { return _val; }
 
 } // namespace vars
 } // namespace june

@@ -94,17 +94,38 @@ enum class OpDataType {
 
 extern const char *OpDataTypeStrs[(u64)OpDataType::_Count];
 
+struct NilOpData {};
+
 union OpData {
-  u64 sz;
+  i64 sz;
   char *s;
   bool b;
+  NilOpData n;
 };
+
+static auto opDataToString(const OpData d, const OpDataType t) -> std::string {
+  switch (t) {
+  case OpDataType::Int:
+  case OpDataType::Size:
+    return std::to_string(d.sz);
+  case OpDataType::Float:
+  case OpDataType::String:
+  case OpDataType::Ident:
+    return std::string(d.s);
+  case OpDataType::Bool:
+    return d.b ? "true" : "false";
+  case OpDataType::Nil:
+    return "nil";
+  default:
+    return "";
+  }
+}
 
 inline static auto hashOpData(const OpDataType ty, const OpData d) -> int {
   switch (ty) {
   case OpDataType::Int:
   case OpDataType::Size:
-    return std::hash<u64>()(d.sz);
+    return std::hash<i64>()(d.sz);
   case OpDataType::Float:
   case OpDataType::String:
   case OpDataType::Ident:
@@ -129,10 +150,12 @@ struct Op {
 
   auto str() const -> std::string;
 
-  auto toBytes() const -> std::vector<u8>;
+  auto toBytes(OpDataType type) const -> std::vector<u8>;
 };
 
 using DataPair = std::pair<OpData, OpDataType>;
+
+using namespace june::err;
 
 struct Bytecode {
 private:
@@ -143,6 +166,41 @@ public:
   Bytecode() = default;
   ~Bytecode();
 
+  /*
+    [june bytecode version] - 8 bytes
+
+    [data size] - 8 bytes (amount of data pairs of opdata and opdatatype)
+    [data]
+
+    [op size] - 8 bytes (amount of ops)
+    [ops]
+  */
+
+  /*
+    data format:
+
+    [data type] - 1 byte
+
+    if int/size:
+      [data] - 8 bytes (unsigned, big endian)
+    elif float/string/ident:
+      [strlen] - 8 bytes (unsigned, big endian)
+      [data] - [strlen] bytes
+    elif bool:
+      [data] - 1 byte
+    elif nil:
+      [data] - 0 bytes
+  */
+
+  /*
+    op format:
+
+    [op] - 2 bytes (unsigned, big endian)
+    [src id] - 8 bytes (unsigned, big endian)
+    [idx] - 8 bytes (unsigned, big endian)
+    [data idx] - 8 bytes (unsigned, big endian)
+  */
+
   // Inserts data or returns the index of data that already exists
   auto insertData(const OpDataType &type, const OpData &data) -> u64;
 
@@ -151,13 +209,18 @@ public:
               const std::string &data) -> void;
   auto addBool(const u64 &idx, const Ops op, const bool &data) -> void;
   auto addSize(const u64 &idx, const Ops op, const u64 &data) -> void;
-  auto addInt(const u64 &idx, const Ops op, const int &data) -> void;
-  auto addFloat(const u64 &idx, const Ops op, const float &data) -> void;
+  auto addInt(const u64 &idx, const Ops op, const i64 &data) -> void;
+  auto addFloat(const u64 &idx, const Ops op, const f64 &data) -> void;
 
   auto at(const u64 &idx) -> Op &;
   auto update(const u64 &idx, const Op &op) -> void;
 
+  auto addOp(const Op op) -> void;
+
   auto toBytes() -> std::vector<u8>;
+  static auto fromBytes(const std::vector<u8> &bytes) -> Result<Bytecode, Error>;
+  
+  auto str() const -> std::string;
 
   inline auto get() const -> const std::vector<Op> & { return bytecode; }
   inline auto getMut() -> std::vector<Op> & { return bytecode; }

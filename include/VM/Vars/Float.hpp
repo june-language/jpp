@@ -7,15 +7,15 @@ namespace june {
 namespace vars {
 
 class Float : public Base {
-  double _val;
+  f64 _val;
 
 public:
-  Float(const double &val, const u64 &srcId, const u64 &idx);
+  Float(const f64 &val, const u64 &srcId, const u64 &idx);
 
   auto clone(const u64 &srcId, const u64 &idx) -> Base * override;
   auto set(Base *from) -> void override;
 
-  auto get() -> double &;
+  auto get() -> f64 &;
 };
 
 } // namespace vars
